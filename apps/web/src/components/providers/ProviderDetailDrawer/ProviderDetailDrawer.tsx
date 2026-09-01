@@ -229,6 +229,9 @@ export function ProviderDetailDrawer({
             <div className={styles.disabledBadge}>{t('ai_providers.config_disabled_badge')}</div>
           )}
           {row.kind !== 'openai' && (
+            <FieldRow label={t('ai_providers.display_name_label')} value={row.raw.displayName} />
+          )}
+          {row.kind !== 'openai' && (
             <FieldRow label={t('common.api_key')} value={maskApiKey(row.raw.apiKey)} />
           )}
           <FieldRow label={t('common.base_url')} value={row.baseUrl} />

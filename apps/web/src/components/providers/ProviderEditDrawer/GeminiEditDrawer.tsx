@@ -10,11 +10,7 @@ import { SelectionCheckbox } from '@/components/ui/SelectionCheckbox';
 import { CoolingPolicySelect } from '@/components/providers/CoolingPolicySelect';
 import { modelsApi, providersApi } from '@/services/api';
 import { useConfigStore, useNotificationStore } from '@/stores';
-import {
-  coolingPolicyFromOverride,
-  coolingPolicyToOverride,
-  type GeminiKeyConfig,
-} from '@/types';
+import { coolingPolicyFromOverride, coolingPolicyToOverride, type GeminiKeyConfig } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { normalizeAuthIndex } from '@/utils/authIndex';
 import {
@@ -47,6 +43,7 @@ type GeminiFormBaseline = ReturnType<typeof buildGeminiBaseline>;
 
 const buildEmptyForm = (): GeminiFormState => ({
   apiKey: '',
+  displayName: '',
   priority: undefined,
   weight: undefined,
   prefix: '',
@@ -76,6 +73,7 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
 
 const buildGeminiBaseline = (form: GeminiFormState) => ({
   apiKey: String(form.apiKey ?? '').trim(),
+  displayName: String(form.displayName ?? '').trim(),
   authIndex: normalizeAuthIndex(form.authIndex) ?? '',
   priority:
     form.priority !== undefined && Number.isFinite(form.priority)
@@ -208,6 +206,7 @@ export function GeminiEditDrawer({
     const comparableWeight = getCredentialWeightComparisonValue(form.weight);
     return (
       baseline.apiKey !== form.apiKey.trim() ||
+      baseline.displayName !== String(form.displayName ?? '').trim() ||
       baseline.authIndex !== (normalizeAuthIndex(form.authIndex) ?? '') ||
       baseline.priority !== normalizedPriority ||
       baseline.weight !== comparableWeight ||
@@ -338,6 +337,7 @@ export function GeminiEditDrawer({
       }));
       const payload: GeminiKeyConfig = {
         apiKey,
+        displayName: form.displayName?.trim() || undefined,
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         weight: normalizeCredentialWeight(form.weight),
         prefix: form.prefix?.trim() || undefined,
@@ -363,16 +363,20 @@ export function GeminiEditDrawer({
         }
       }
       const syncedList = isInteractions
-        ? await providersApi.getInteractionsKeys().catch(() =>
-            editIndex !== null
-              ? configs.map((item, index) => (index === editIndex ? payload : item))
-              : [...configs, payload]
-          )
-        : await providersApi.getGeminiKeys().catch(() =>
-            editIndex !== null
-              ? configs.map((item, index) => (index === editIndex ? payload : item))
-              : [...configs, payload]
-          );
+        ? await providersApi
+            .getInteractionsKeys()
+            .catch(() =>
+              editIndex !== null
+                ? configs.map((item, index) => (index === editIndex ? payload : item))
+                : [...configs, payload]
+            )
+        : await providersApi
+            .getGeminiKeys()
+            .catch(() =>
+              editIndex !== null
+                ? configs.map((item, index) => (index === editIndex ? payload : item))
+                : [...configs, payload]
+            );
       updateConfigValue(configSection, syncedList);
       clearCache(configSection);
       showNotification(
@@ -507,6 +511,13 @@ export function GeminiEditDrawer({
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
               disabled={disabled || saving}
               required
+            />
+            <Input
+              label={t('ai_providers.display_name_label')}
+              placeholder={t('ai_providers.display_name_placeholder')}
+              value={form.displayName ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+              disabled={disabled || saving}
             />
             <Input
               label={t('ai_providers.gemini_base_url_label')}

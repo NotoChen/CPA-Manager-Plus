@@ -426,6 +426,8 @@
   },
   "ai_providers": {
     "title": "Конфигурация AI-провайдеров",
+    "display_name_label": "Отображаемое имя",
+    "display_name_placeholder": "например: основной Sub2API",
     "delete_second_title": "Подтвердите окончательное удаление",
     "delete_second_confirm": "Последнее подтверждение: окончательно удалить конфигурацию {{provider}} {{target}}? Это действие нельзя отменить.",
     "delete_second_action": "Удалить навсегда",

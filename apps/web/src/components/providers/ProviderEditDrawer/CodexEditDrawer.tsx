@@ -62,6 +62,7 @@ const XAI_API_BASE_URL = 'https://api.x.ai/v1';
 
 const buildEmptyForm = (baseUrl = ''): ProviderFormState => ({
   apiKey: '',
+  displayName: '',
   priority: undefined,
   weight: undefined,
   prefix: '',
@@ -88,6 +89,7 @@ const normalizeModelEntries = (entries: ProviderFormState['modelEntries']) =>
 
 const buildCodexBaseline = (form: ProviderFormState) => ({
   apiKey: String(form.apiKey ?? '').trim(),
+  displayName: String(form.displayName ?? '').trim(),
   authIndex: normalizeAuthIndex(form.authIndex) ?? '',
   priority:
     form.priority !== undefined && Number.isFinite(form.priority)
@@ -235,6 +237,7 @@ export function CodexEditDrawer({
     const comparableWeight = getCredentialWeightComparisonValue(form.weight);
     return (
       baseline.apiKey !== form.apiKey.trim() ||
+      baseline.displayName !== String(form.displayName ?? '').trim() ||
       baseline.authIndex !== (normalizeAuthIndex(form.authIndex) ?? '') ||
       baseline.priority !== normalizedPriority ||
       baseline.weight !== comparableWeight ||
@@ -511,6 +514,7 @@ export function CodexEditDrawer({
     try {
       const payload: ProviderKeyConfig = {
         apiKey: form.apiKey.trim(),
+        displayName: form.displayName?.trim() || undefined,
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         weight: normalizeCredentialWeight(form.weight),
         prefix: form.prefix?.trim() || undefined,
@@ -663,6 +667,13 @@ export function CodexEditDrawer({
               onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
               disabled={disabled || saving}
               required
+            />
+            <Input
+              label={t('ai_providers.display_name_label')}
+              placeholder={t('ai_providers.display_name_placeholder')}
+              value={form.displayName ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+              disabled={disabled || saving}
             />
             <Input
               label={t('ai_providers.codex_add_modal_url_label')}

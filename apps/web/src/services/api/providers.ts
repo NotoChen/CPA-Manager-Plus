@@ -40,6 +40,8 @@ const LEGACY_CCH_FIELDS = [
 const COMMON_PROVIDER_KEY_FIELDS = [
   'api-key',
   'apiKey',
+  'display-name',
+  'displayName',
   ...AUTH_INDEX_FIELDS,
   'priority',
   'weight',
@@ -675,6 +677,7 @@ const serializeApiKeyEntry = (entry: ApiKeyEntry) => {
 
 const serializeProviderKey = (config: ProviderKeyConfig) => {
   const payload: Record<string, unknown> = {};
+  if (config.displayName?.trim()) payload['display-name'] = config.displayName.trim();
   const apiKey = config.apiKey?.trim();
   if (apiKey) payload['api-key'] = apiKey;
   const authIndex = serializeAuthIndex(config.authIndex);
@@ -745,6 +748,7 @@ const serializeClaudeUpdatePayload = (original: ProviderKeyConfig, value: Provid
 
 const serializeVertexKey = (config: ProviderKeyConfig) => {
   const payload: Record<string, unknown> = {};
+  if (config.displayName?.trim()) payload['display-name'] = config.displayName.trim();
   const apiKey = config.apiKey?.trim();
   if (apiKey) payload['api-key'] = apiKey;
   const authIndex = serializeAuthIndex(config.authIndex);
@@ -767,6 +771,7 @@ const serializeVertexKey = (config: ProviderKeyConfig) => {
 
 const serializeGeminiKey = (config: GeminiKeyConfig) => {
   const payload: Record<string, unknown> = {};
+  if (config.displayName?.trim()) payload['display-name'] = config.displayName.trim();
   const apiKey = config.apiKey?.trim();
   if (!apiKey) {
     throw new Error('API key is required for Gemini and Interactions providers');

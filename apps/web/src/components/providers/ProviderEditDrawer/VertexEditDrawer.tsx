@@ -7,11 +7,23 @@ import { HeaderInputList } from '@/components/ui/HeaderInputList';
 import { ModelInputList } from '@/components/ui/ModelInputList';
 import { providersApi } from '@/services/api';
 import { useConfigStore, useNotificationStore } from '@/stores';
-import { coolingPolicyFromOverride, coolingPolicyToOverride, type ProviderKeyConfig } from '@/types';
+import {
+  coolingPolicyFromOverride,
+  coolingPolicyToOverride,
+  type ProviderKeyConfig,
+} from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
-import { areKeyValueEntriesEqual, areModelEntriesEqual, areStringArraysEqual } from '@/utils/compare';
+import {
+  areKeyValueEntriesEqual,
+  areModelEntriesEqual,
+  areStringArraysEqual,
+} from '@/utils/compare';
 import { excludedModelsToText, parseExcludedModels } from '@/components/providers/utils';
-import { CoolingPolicySelect, CredentialWeightInput, type VertexFormState } from '@/components/providers';
+import {
+  CoolingPolicySelect,
+  CredentialWeightInput,
+  type VertexFormState,
+} from '@/components/providers';
 import {
   getCredentialWeightComparisonValue,
   getCredentialWeightError,
@@ -31,6 +43,7 @@ type VertexFormBaseline = ReturnType<typeof buildVertexBaseline>;
 
 const buildEmptyForm = (): VertexFormState => ({
   apiKey: '',
+  displayName: '',
   weight: undefined,
   prefix: '',
   baseUrl: '',
@@ -54,7 +67,11 @@ const normalizeModelEntries = (entries: Array<{ name: string; alias: string }>) 
 
 const buildVertexBaseline = (form: VertexFormState) => ({
   apiKey: String(form.apiKey ?? '').trim(),
-  priority: form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null,
+  displayName: String(form.displayName ?? '').trim(),
+  priority:
+    form.priority !== undefined && Number.isFinite(form.priority)
+      ? Math.trunc(form.priority)
+      : null,
   weight: normalizeCredentialWeight(form.weight) ?? null,
   prefix: String(form.prefix ?? '').trim(),
   baseUrl: String(form.baseUrl ?? '').trim(),
@@ -71,7 +88,13 @@ const getErrorMessage = (err: unknown) => {
   return '';
 };
 
-export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }: VertexEditDrawerProps) {
+export function VertexEditDrawer({
+  open,
+  editIndex,
+  disabled,
+  onClose,
+  onSaved,
+}: VertexEditDrawerProps) {
   const { t } = useTranslation();
   const { showNotification } = useNotificationStore();
   const fetchConfig = useConfigStore((state) => state.fetchConfig);
@@ -83,7 +106,9 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<VertexFormState>(buildEmptyForm);
-  const [baseline, setBaseline] = useState<VertexFormBaseline>(buildVertexBaseline(buildEmptyForm()));
+  const [baseline, setBaseline] = useState<VertexFormBaseline>(
+    buildVertexBaseline(buildEmptyForm())
+  );
   const [loaded, setLoaded] = useState(false);
 
   const initialData = useMemo(() => {
@@ -92,7 +117,10 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
   }, [configs, editIndex]);
   const invalidIndex = editIndex !== null && !initialData;
 
-  const title = editIndex !== null ? t('ai_providers.vertex_edit_modal_title') : t('ai_providers.vertex_add_modal_title');
+  const title =
+    editIndex !== null
+      ? t('ai_providers.vertex_edit_modal_title')
+      : t('ai_providers.vertex_add_modal_title');
 
   useEffect(() => {
     if (!open) return;
@@ -102,8 +130,11 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
     Promise.all([fetchConfig('vertex-api-key'), providersApi.getVertexConfigs()])
       .then(([configResult, vertexResult]) => {
         if (cancelled) return;
-        const list = Array.isArray(vertexResult) ? (vertexResult as ProviderKeyConfig[])
-          : Array.isArray(configResult) ? (configResult as ProviderKeyConfig[]) : [];
+        const list = Array.isArray(vertexResult)
+          ? (vertexResult as ProviderKeyConfig[])
+          : Array.isArray(configResult)
+            ? (configResult as ProviderKeyConfig[])
+            : [];
         setConfigs(list);
         updateConfigValue('vertex-api-key', list);
         clearCache('vertex-api-key');
@@ -117,7 +148,9 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
         setLoading(false);
         setLoaded(true);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [open, clearCache, fetchConfig, t, updateConfigValue]);
 
   useEffect(() => {
@@ -127,7 +160,9 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
         ...initialData,
         disableCooling: coolingPolicyFromOverride(initialData.disableCooling),
         headers: headersToEntries(initialData.headers),
-        modelEntries: initialData.models?.map((m) => ({ name: m.name, alias: m.alias ?? '' })) ?? [{ name: '', alias: '' }],
+        modelEntries: initialData.models?.map((m) => ({ name: m.name, alias: m.alias ?? '' })) ?? [
+          { name: '', alias: '' },
+        ],
         excludedText: excludedModelsToText(initialData.excludedModels),
       };
       setForm(nextForm);
@@ -143,10 +178,14 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
     !disabled && !saving && !loading && !invalidIndex && !getCredentialWeightError(form.weight);
 
   const isDirty = useMemo(() => {
-    const normalizedPriority = form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : null;
+    const normalizedPriority =
+      form.priority !== undefined && Number.isFinite(form.priority)
+        ? Math.trunc(form.priority)
+        : null;
     const comparableWeight = getCredentialWeightComparisonValue(form.weight);
     return (
       baseline.apiKey !== form.apiKey.trim() ||
+      baseline.displayName !== String(form.displayName ?? '').trim() ||
       baseline.priority !== normalizedPriority ||
       baseline.weight !== comparableWeight ||
       baseline.prefix !== String(form.prefix ?? '').trim() ||
@@ -163,12 +202,20 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
     if (!canSave) return;
     const apiKey = form.apiKey.trim();
     if (!apiKey) {
-      showNotification(t('ai_providers.vertex_key_required', { defaultValue: 'Please enter a Vertex API Key' }), 'error');
+      showNotification(
+        t('ai_providers.vertex_key_required', { defaultValue: 'Please enter a Vertex API Key' }),
+        'error'
+      );
       return;
     }
     const baseUrl = (form.baseUrl ?? '').trim();
     if (!baseUrl) {
-      showNotification(t('ai_providers.vertex_base_url_required', { defaultValue: 'Please enter the Vertex Base URL' }), 'error');
+      showNotification(
+        t('ai_providers.vertex_base_url_required', {
+          defaultValue: 'Please enter the Vertex Base URL',
+        }),
+        'error'
+      );
       return;
     }
     setSaving(true);
@@ -176,18 +223,24 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
     try {
       const payload: ProviderKeyConfig = {
         apiKey: form.apiKey.trim(),
-        priority: form.priority !== undefined && Number.isFinite(form.priority) ? Math.trunc(form.priority) : undefined,
+        displayName: form.displayName?.trim() || undefined,
+        priority:
+          form.priority !== undefined && Number.isFinite(form.priority)
+            ? Math.trunc(form.priority)
+            : undefined,
         weight: normalizeCredentialWeight(form.weight),
         prefix: form.prefix?.trim() || undefined,
         baseUrl: (form.baseUrl ?? '').trim() || undefined,
         proxyUrl: form.proxyUrl?.trim() || undefined,
         headers: buildHeaderObject(form.headers),
-        models: form.modelEntries.map((entry) => {
-          const name = entry.name.trim();
-          const alias = entry.alias.trim();
-          if (!name || !alias) return null;
-          return { name, alias };
-        }).filter(Boolean) as ProviderKeyConfig['models'],
+        models: form.modelEntries
+          .map((entry) => {
+            const name = entry.name.trim();
+            const alias = entry.alias.trim();
+            if (!name || !alias) return null;
+            return { name, alias };
+          })
+          .filter(Boolean) as ProviderKeyConfig['models'],
         excludedModels: parseExcludedModels(form.excludedText),
         disableCooling: coolingPolicyToOverride(form.disableCooling),
       };
@@ -196,14 +249,21 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
       } else {
         await providersApi.createVertexConfig(payload);
       }
-      const syncedList = await providersApi.getVertexConfigs().catch(() =>
-        editIndex !== null
-          ? configs.map((item, index) => (index === editIndex ? payload : item))
-          : [...configs, payload]
-      );
+      const syncedList = await providersApi
+        .getVertexConfigs()
+        .catch(() =>
+          editIndex !== null
+            ? configs.map((item, index) => (index === editIndex ? payload : item))
+            : [...configs, payload]
+        );
       updateConfigValue('vertex-api-key', syncedList);
       clearCache('vertex-api-key');
-      showNotification(editIndex !== null ? t('notification.vertex_config_updated') : t('notification.vertex_config_added'), 'success');
+      showNotification(
+        editIndex !== null
+          ? t('notification.vertex_config_updated')
+          : t('notification.vertex_config_added'),
+        'success'
+      );
       onSaved();
       onClose();
     } catch (err: unknown) {
@@ -212,7 +272,18 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
     } finally {
       setSaving(false);
     }
-  }, [canSave, clearCache, configs, editIndex, form, onClose, onSaved, showNotification, t, updateConfigValue]);
+  }, [
+    canSave,
+    clearCache,
+    configs,
+    editIndex,
+    form,
+    onClose,
+    onSaved,
+    showNotification,
+    t,
+    updateConfigValue,
+  ]);
 
   const handleClose = useCallback(() => {
     if (isDirty && !saving) {
@@ -240,30 +311,60 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
         {invalidIndex && <div className="hint">{t('common.invalid_provider_index')}</div>}
         {!loading && !invalidIndex && (
           <>
-            <Input label={t('ai_providers.vertex_add_modal_key_label')} placeholder={t('ai_providers.vertex_add_modal_key_placeholder')}
-              value={form.apiKey} onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
-              disabled={disabled || saving} required />
-            <Input label={t('ai_providers.vertex_add_modal_url_label')} placeholder={t('ai_providers.vertex_add_modal_url_placeholder')}
-              value={form.baseUrl ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              disabled={disabled || saving} required />
-            <Input label={t('ai_providers.prefix_label')} placeholder={t('ai_providers.prefix_placeholder')}
-              value={form.prefix ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
-              hint={t('ai_providers.prefix_hint')} disabled={disabled || saving} />
+            <Input
+              label={t('ai_providers.vertex_add_modal_key_label')}
+              placeholder={t('ai_providers.vertex_add_modal_key_placeholder')}
+              value={form.apiKey}
+              onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
+              disabled={disabled || saving}
+              required
+            />
+            <Input
+              label={t('ai_providers.display_name_label')}
+              placeholder={t('ai_providers.display_name_placeholder')}
+              value={form.displayName ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+              disabled={disabled || saving}
+            />
+            <Input
+              label={t('ai_providers.vertex_add_modal_url_label')}
+              placeholder={t('ai_providers.vertex_add_modal_url_placeholder')}
+              value={form.baseUrl ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
+              disabled={disabled || saving}
+              required
+            />
+            <Input
+              label={t('ai_providers.prefix_label')}
+              placeholder={t('ai_providers.prefix_placeholder')}
+              value={form.prefix ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, prefix: e.target.value }))}
+              hint={t('ai_providers.prefix_hint')}
+              disabled={disabled || saving}
+            />
             <CredentialWeightInput
               value={form.weight}
               onChange={(weight) => setForm((prev) => ({ ...prev, weight }))}
               disabled={disabled || saving}
             />
-            <Input label={t('ai_providers.vertex_add_modal_proxy_label')} placeholder={t('ai_providers.vertex_add_modal_proxy_placeholder')}
-              value={form.proxyUrl ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
+            <Input
+              label={t('ai_providers.vertex_add_modal_proxy_label')}
+              placeholder={t('ai_providers.vertex_add_modal_proxy_placeholder')}
+              value={form.proxyUrl ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, proxyUrl: e.target.value }))}
               hint={t('ai_providers.model_discovery_proxy_version_hint')}
-              disabled={disabled || saving} />
-            <HeaderInputList entries={form.headers}
+              disabled={disabled || saving}
+            />
+            <HeaderInputList
+              entries={form.headers}
               onChange={(entries) => setForm((prev) => ({ ...prev, headers: entries }))}
-              addLabel={t('common.custom_headers_add')} keyPlaceholder={t('common.custom_headers_key_placeholder')}
+              addLabel={t('common.custom_headers_add')}
+              keyPlaceholder={t('common.custom_headers_key_placeholder')}
               valuePlaceholder={t('common.custom_headers_value_placeholder')}
-              removeButtonTitle={t('common.delete')} removeButtonAriaLabel={t('common.delete')}
-              disabled={disabled || saving} />
+              removeButtonTitle={t('common.delete')}
+              removeButtonAriaLabel={t('common.delete')}
+              disabled={disabled || saving}
+            />
             <CoolingPolicySelect
               value={form.disableCooling}
               onChange={(value) => setForm((prev) => ({ ...prev, disableCooling: value }))}
@@ -273,18 +374,27 @@ export function VertexEditDrawer({ open, editIndex, disabled, onClose, onSaved }
             />
             <div className="form-group">
               <label>{t('ai_providers.vertex_models_label')}</label>
-              <ModelInputList entries={form.modelEntries}
+              <ModelInputList
+                entries={form.modelEntries}
                 onChange={(entries) => setForm((prev) => ({ ...prev, modelEntries: entries }))}
                 addLabel={t('ai_providers.vertex_models_add_btn')}
-                namePlaceholder={t('common.model_name_placeholder')} aliasPlaceholder={t('common.model_alias_placeholder')}
-                removeButtonTitle={t('common.delete')} removeButtonAriaLabel={t('common.delete')}
-                disabled={disabled || saving} />
+                namePlaceholder={t('common.model_name_placeholder')}
+                aliasPlaceholder={t('common.model_alias_placeholder')}
+                removeButtonTitle={t('common.delete')}
+                removeButtonAriaLabel={t('common.delete')}
+                disabled={disabled || saving}
+              />
             </div>
             <div className="form-group">
               <label>{t('ai_providers.excluded_models_label')}</label>
-              <textarea className="input" placeholder={t('ai_providers.excluded_models_placeholder')}
-                value={form.excludedText} onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
-                rows={4} disabled={disabled || saving} />
+              <textarea
+                className="input"
+                placeholder={t('ai_providers.excluded_models_placeholder')}
+                value={form.excludedText}
+                onChange={(e) => setForm((prev) => ({ ...prev, excludedText: e.target.value }))}
+                rows={4}
+                disabled={disabled || saving}
+              />
               <div className="hint">{t('ai_providers.excluded_models_hint')}</div>
             </div>
           </>

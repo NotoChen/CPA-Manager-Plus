@@ -65,6 +65,7 @@ const DEFAULT_ANTHROPIC_VERSION = '2023-06-01';
 
 const buildEmptyForm = (): ProviderFormState => ({
   apiKey: '',
+  displayName: '',
   authIndex: '',
   priority: undefined,
   weight: undefined,
@@ -116,6 +117,7 @@ const areCloakConfigsEqual = (
 
 const buildClaudeBaseline = (form: ProviderFormState) => ({
   apiKey: String(form.apiKey ?? '').trim(),
+  displayName: String(form.displayName ?? '').trim(),
   authIndex: normalizeAuthIndex(form.authIndex) ?? '',
   priority:
     form.priority !== undefined && Number.isFinite(form.priority)
@@ -272,6 +274,7 @@ export function ClaudeEditDrawer({
     const comparableWeight = getCredentialWeightComparisonValue(form.weight);
     return (
       baseline.apiKey !== form.apiKey.trim() ||
+      baseline.displayName !== String(form.displayName ?? '').trim() ||
       baseline.authIndex !== (normalizeAuthIndex(form.authIndex) ?? '') ||
       baseline.priority !== normalizedPriority ||
       baseline.weight !== comparableWeight ||
@@ -321,11 +324,7 @@ export function ClaudeEditDrawer({
 
   const configuredModelNames = useMemo(
     () =>
-      new Set(
-        form.modelEntries
-          .map((entry) => entry.name.trim().toLowerCase())
-          .filter(Boolean)
-      ),
+      new Set(form.modelEntries.map((entry) => entry.name.trim().toLowerCase()).filter(Boolean)),
     [form.modelEntries]
   );
 
@@ -441,9 +440,7 @@ export function ClaudeEditDrawer({
             hasCustomXApiKey ? 'yes' : 'no'
           }, customAuthorization=${hasAuthorization ? 'yes' : 'no'}]`
         : '';
-      setModelDiscoveryError(
-        `${t('ai_providers.claude_models_fetch_error')}: ${message}${diag}`
-      );
+      setModelDiscoveryError(`${t('ai_providers.claude_models_fetch_error')}: ${message}${diag}`);
     } finally {
       setModelDiscoveryFetching(false);
     }
@@ -474,15 +471,18 @@ export function ClaudeEditDrawer({
     });
   }, [configuredModelNames, discoveredModels]);
 
-  const toggleModelDiscoverySelection = useCallback((name: string) => {
-    if (configuredModelNames.has(name.toLowerCase())) return;
-    setModelDiscoverySelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  }, [configuredModelNames]);
+  const toggleModelDiscoverySelection = useCallback(
+    (name: string) => {
+      if (configuredModelNames.has(name.toLowerCase())) return;
+      setModelDiscoverySelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        return next;
+      });
+    },
+    [configuredModelNames]
+  );
 
   const handleSelectVisibleModels = useCallback(() => {
     setModelDiscoverySelected((prev) => {
@@ -611,6 +611,7 @@ export function ClaudeEditDrawer({
     try {
       const payload: ProviderKeyConfig = {
         apiKey: form.apiKey.trim(),
+        displayName: form.displayName?.trim() || undefined,
         priority: form.priority !== undefined ? Math.trunc(form.priority) : undefined,
         weight: normalizeCredentialWeight(form.weight),
         prefix: form.prefix?.trim() || undefined,
@@ -739,6 +740,13 @@ export function ClaudeEditDrawer({
               required
             />
             <Input
+              label={t('ai_providers.display_name_label')}
+              placeholder={t('ai_providers.display_name_placeholder')}
+              value={form.displayName ?? ''}
+              onChange={(e) => setForm((prev) => ({ ...prev, displayName: e.target.value }))}
+              disabled={saving || disabled || isTesting}
+            />
+            <Input
               label={t('ai_providers.claude_add_modal_url_label')}
               value={form.baseUrl ?? ''}
               onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
@@ -797,9 +805,7 @@ export function ClaudeEditDrawer({
                 disabled={saving || disabled || isTesting}
                 ariaLabel={t('ai_providers.rebuild_mid_system_message_label')}
               />
-              <div className="hint">
-                {t('ai_providers.rebuild_mid_system_message_hint')}
-              </div>
+              <div className="hint">{t('ai_providers.rebuild_mid_system_message_hint')}</div>
             </div>
 
             <div className="form-group">
@@ -1102,9 +1108,7 @@ export function ClaudeEditDrawer({
                                 )}
                               </div>
                               {model.description && (
-                                <div className={styles.modelDiscoveryDesc}>
-                                  {model.description}
-                                </div>
+                                <div className={styles.modelDiscoveryDesc}>{model.description}</div>
                               )}
                             </div>
                           }

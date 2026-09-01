@@ -15,13 +15,7 @@ import {
 } from '../utils';
 
 export type ProviderKind =
-  | 'gemini'
-  | 'interactions'
-  | 'codex'
-  | 'xai'
-  | 'claude'
-  | 'vertex'
-  | 'openai';
+  'gemini' | 'interactions' | 'codex' | 'xai' | 'claude' | 'vertex' | 'openai';
 
 export const PROVIDER_KINDS: readonly ProviderKind[] = [
   'gemini',
@@ -104,8 +98,8 @@ function buildKeyConfigRow(
     key: `${kind}:${getProviderConfigKey(config, originalIndex)}`,
     kind,
     originalIndex,
-    label: maskApiKey(config.apiKey),
-    sortName: getKeyConfigSortName(config),
+    label: config.displayName?.trim() || maskApiKey(config.apiKey),
+    sortName: config.displayName?.trim() || getKeyConfigSortName(config),
     baseUrl: config.baseUrl ?? '',
     priority: config.priority,
     modelNames,
@@ -122,6 +116,7 @@ function buildKeyConfigRow(
     statusData: getProviderRecentStatusData(usageByProvider, kind, config.apiKey, config.baseUrl),
     haystack: buildHaystack([
       config.apiKey,
+      config.displayName,
       config.prefix,
       config.baseUrl,
       config.proxyUrl,

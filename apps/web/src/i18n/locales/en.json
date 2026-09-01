@@ -422,6 +422,8 @@
   },
   "ai_providers": {
     "title": "AI Providers Configuration",
+    "display_name_label": "Display name",
+    "display_name_placeholder": "e.g. Sub2API primary",
     "delete_second_title": "Confirm permanent deletion",
     "delete_second_confirm": "Final confirmation: permanently delete {{provider}} configuration {{target}}? This action cannot be undone.",
     "delete_second_action": "Delete permanently",
