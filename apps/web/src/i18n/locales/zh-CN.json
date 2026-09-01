@@ -421,7 +421,7 @@
   "ai_providers": {
     "title": "AI 提供商配置",
     "display_name_label": "备注名",
-    "display_name_placeholder": "例如：Sub2API 主账号",
+    "display_name_placeholder": "例如：工作账号",
     "delete_second_title": "再次确认永久删除",
     "delete_second_confirm": "这是最后一次确认：确定永久删除 {{provider}} 配置 {{target}} 吗？此操作不可恢复。",
     "delete_second_action": "永久删除",
