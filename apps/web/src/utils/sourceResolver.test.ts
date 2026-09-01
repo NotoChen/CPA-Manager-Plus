@@ -43,6 +43,25 @@ describe('source resolver', () => {
     expect(resolved.identityKey).toBe('xai:0');
   });
 
+  it('uses static provider display names for usage sources', () => {
+    const sourceInfoMap = buildSourceInfoMap({
+      codexApiKeys: [
+        {
+          apiKey: 'sk-1234567890abcdef',
+          displayName: 'Work Codex',
+          authIndex: 'codex-api-key-1',
+          baseUrl: 'https://api.first.example/v1',
+        },
+      ],
+    });
+
+    const resolved = resolveSourceDisplay('', 'codex-api-key-1', sourceInfoMap, new Map());
+
+    expect(resolved.displayName).toBe('Work Codex');
+    expect(resolved.type).toBe('codex');
+    expect(resolved.identityKey).toBe('codex:0');
+  });
+
   it('keeps shared upstream names when one key is registered under Codex and Claude', () => {
     const sharedKey = 'sk-shared1234567890abcdef';
     const sourceInfoMap = buildSourceInfoMap({

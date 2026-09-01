@@ -87,7 +87,12 @@ const extractHost = (baseUrl: string | undefined) => {
 };
 
 const buildProviderDisplayNames = (
-  items: Array<{ prefix?: string; name?: string; baseUrl?: string }>,
+  items: Array<{
+    prefix?: string;
+    name?: string;
+    baseUrl?: string;
+    displayName?: string;
+  }>,
   fallbackLabel: string
 ) => {
   const hostCounts = new Map<string, number>();
@@ -102,6 +107,9 @@ const buildProviderDisplayNames = (
 
   const hostOrdinals = new Map<string, number>();
   return items.map((item, index) => {
+    const displayName = item.displayName?.trim();
+    if (displayName) return displayName;
+
     const prefix = item.prefix?.trim();
     if (prefix) return prefix;
 
@@ -175,6 +183,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
   const providers: Array<{
     items: Array<{
       apiKey?: string;
+      displayName?: string;
       prefix?: string;
       authIndex?: string;
       excludedModels?: string[];
