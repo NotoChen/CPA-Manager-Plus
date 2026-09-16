@@ -83,6 +83,12 @@ describe('formatUsd', () => {
 });
 
 describe('usage source candidates', () => {
+  it('includes the SHA-256 source emitted by current CPA Manager persistence', () => {
+    expect(buildCandidateUsageSourceIds({ apiKey: 'sk-1234567890abcdef' })).toContain(
+      'h:dd65e03569cfa4fa17f41cc914529f60fa210b46a7ee8647c7c2f1ed5844a3ea'
+    );
+  });
+
   it('includes the masked source emitted by CPA for raw upstream keys', () => {
     expect(buildCandidateUsageSourceIds({ apiKey: 'sk-1234567890abcdef' })).toContain(
       'm:sk-1...cdef'
@@ -115,6 +121,12 @@ describe('usage source candidates', () => {
     };
 
     expect(collectUsageDetails(usageData)[0].source).toBe('m:sk-1...cdef');
+  });
+
+  it('preserves canonical backend SHA-256 sources without re-fingerprinting them', () => {
+    expect(
+      normalizeUsageSourceId('h:DD65E03569CFA4FA17F41CC914529F60FA210B46A7EE8647C7C2F1ED5844A3EA')
+    ).toBe('h:dd65e03569cfa4fa17f41cc914529f60fa210b46a7ee8647c7c2f1ed5844a3ea');
   });
 
   it('does not trust text-prefixed raw API key sources', () => {

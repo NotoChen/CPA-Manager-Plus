@@ -7,6 +7,29 @@ import {
 } from './sourceResolver';
 
 describe('source resolver', () => {
+  it('resolves current backend SHA-256 sources to configured provider display names', () => {
+    const sourceInfoMap = buildSourceInfoMap({
+      codexApiKeys: [
+        {
+          apiKey: 'sk-1234567890abcdef',
+          displayName: 'Team Codex',
+          baseUrl: 'https://api.first.example/v1',
+        },
+      ],
+    });
+
+    const resolved = resolveSourceDisplay(
+      'h:dd65e03569cfa4fa17f41cc914529f60fa210b46a7ee8647c7c2f1ed5844a3ea',
+      '',
+      sourceInfoMap,
+      new Map()
+    );
+
+    expect(resolved.displayName).toBe('Team Codex');
+    expect(resolved.type).toBe('codex');
+    expect(resolved.identityKey).toBe('codex:0');
+  });
+
   it('resolves CPA masked Codex API key sources to readable base URL hosts', () => {
     const sourceInfoMap = buildSourceInfoMap({
       codexApiKeys: [
