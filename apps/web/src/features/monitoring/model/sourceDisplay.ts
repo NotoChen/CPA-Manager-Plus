@@ -125,11 +125,13 @@ export const buildMonitoringSourceDisplay = (
         (authMeta?.authIndex ? context.channelByAuthIndex.get(authMeta.authIndex) : undefined);
   const sourceInfoMap = context.sourceInfoMap ?? buildSourceInfoMap({});
   const authFileMap = context.authFileMap ?? buildAuthFileMapFromMeta(context.authMetaMap);
+  const providerHint = firstReadable(authMeta?.provider, input.authProviderSnapshot);
   const sourceMeta = resolveSourceDisplay(
     readString(input.source),
     authIndex,
     sourceInfoMap,
-    authFileMap
+    authFileMap,
+    providerHint
   );
   const apiKeyHash = readString(input.apiKeyHash).toLowerCase();
   const apiKeyAlias = firstReadable(

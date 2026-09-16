@@ -333,6 +333,42 @@ describe('buildEventRows', () => {
     expect(display.primary).toBe('Shared Relay');
   });
 
+  it('uses the provider-specific display name when a hashed key is shared across providers', () => {
+    const sharedKey = 'sk-shared1234567890abcdef';
+    const sourceInfoMap = buildSourceInfoMap({
+      codexApiKeys: [{ apiKey: sharedKey, displayName: 'Codex Relay' }],
+      claudeApiKeys: [{ apiKey: sharedKey, displayName: 'Claude Relay' }],
+    });
+    const [row] = buildEventRows(
+      [
+        {
+          timestamp: '2026-05-19T10:00:00Z',
+          source: 'h:22f7c14e1be337d07323413c33443cca361db691877b8be74ea5f5e9079748c0',
+          auth_index: null,
+          auth_provider_snapshot: 'codex',
+          latency_ms: 1500,
+          tokens: { input_tokens: 10, output_tokens: 20, total_tokens: 30 },
+          failed: false,
+          __modelName: 'gpt-5.4',
+          __endpoint: 'POST /v1/responses',
+          __endpointMethod: 'POST',
+          __endpointPath: '/v1/responses',
+          __timestampMs: Date.parse('2026-05-19T10:00:00Z'),
+        },
+      ],
+      new Map(),
+      new Map(),
+      sourceInfoMap,
+      new Map(),
+      {},
+      new Map()
+    );
+
+    expect(row.source).toBe('Codex Relay');
+    expect(row.sourceKey).toBe('codex:0');
+    expect(row.provider).toBe('codex');
+  });
+
   it('prefers multi-key OpenAI-compatible disambiguation in realtime source cells', () => {
     const sourceInfoMap = buildSourceInfoMap({
       openaiCompatibility: [

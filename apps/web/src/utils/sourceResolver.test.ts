@@ -30,6 +30,25 @@ describe('source resolver', () => {
     expect(resolved.identityKey).toBe('codex:0');
   });
 
+  it('uses the event provider to disambiguate a shared key with different display names', () => {
+    const sharedKey = 'sk-shared1234567890abcdef';
+    const sourceInfoMap = buildSourceInfoMap({
+      codexApiKeys: [{ apiKey: sharedKey, displayName: 'Codex Relay' }],
+      claudeApiKeys: [{ apiKey: sharedKey, displayName: 'Claude Relay' }],
+    });
+    const hashedSource = 'h:22f7c14e1be337d07323413c33443cca361db691877b8be74ea5f5e9079748c0';
+
+    expect(
+      resolveSourceDisplay(hashedSource, '', sourceInfoMap, new Map(), 'codex').displayName
+    ).toBe('Codex Relay');
+    expect(
+      resolveSourceDisplay(hashedSource, '', sourceInfoMap, new Map(), 'claude').displayName
+    ).toBe('Claude Relay');
+    expect(resolveSourceDisplay(hashedSource, '', sourceInfoMap, new Map()).displayName).toBe(
+      hashedSource
+    );
+  });
+
   it('resolves CPA masked Codex API key sources to readable base URL hosts', () => {
     const sourceInfoMap = buildSourceInfoMap({
       codexApiKeys: [

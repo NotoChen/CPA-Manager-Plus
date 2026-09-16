@@ -21,10 +21,27 @@ type SourceInfoEntry = Required<Pick<SourceInfo, 'displayName' | 'type' | 'ident
 export interface SourceInfoMap {
   byAuthIndex: Map<string, SourceInfoEntry | null>;
   bySource: Map<string, SourceInfoEntry | null>;
+  byProviderSource?: Map<string, SourceInfoEntry | null>;
   byIdentityKey: Map<string, SourceInfoEntry>;
 }
 
 const buildProviderIdentityKey = (type: string, index: number | string) => `${type}:${index}`;
+
+const normalizeProviderType = (value: unknown) => {
+  const normalized = String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/_/g, '-');
+  if (normalized === 'openai-compatibility') return 'openai';
+  if (normalized === 'x-ai' || normalized === 'grok') return 'xai';
+  if (normalized === 'gemini-cli') return 'gemini';
+  return normalized;
+};
+
+const buildProviderSourceKey = (provider: unknown, source: string) => {
+  const providerType = normalizeProviderType(provider);
+  return providerType && source ? `${providerType}\u0000${source}` : '';
+};
 
 const hasDisableAllModelsRule = (models?: string[]) =>
   Array.isArray(models) && models.some((model) => String(model ?? '').trim() === '*');
@@ -164,6 +181,7 @@ const buildOpenAIKeyDisplayNameMap = (providers: OpenAIProviderConfig[]) => {
 export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
   const byAuthIndex = new Map<string, SourceInfoEntry | null>();
   const bySource = new Map<string, SourceInfoEntry | null>();
+  const byProviderSource = new Map<string, SourceInfoEntry | null>();
   const byIdentityKey = new Map<string, SourceInfoEntry>();
 
   const registerProvider = (
@@ -177,6 +195,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
 
     Array.from(candidates).forEach((candidate) => {
       registerIdentity(bySource, candidate, entry);
+      registerIdentity(byProviderSource, buildProviderSourceKey(entry.type, candidate), entry);
     });
   };
 
@@ -256,7 +275,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
     });
   });
 
-  [byAuthIndex, bySource].forEach((map) => {
+  [byAuthIndex, bySource, byProviderSource].forEach((map) => {
     map.forEach((entry) => {
       if (entry) {
         byIdentityKey.set(entry.identityKey, entry);
@@ -264,7 +283,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
     });
   });
 
-  return { byAuthIndex, bySource, byIdentityKey };
+  return { byAuthIndex, bySource, byProviderSource, byIdentityKey };
 }
 
 export const buildSourceProviderStateMap = (sourceInfoMap: SourceInfoMap) => {
@@ -281,7 +300,8 @@ export function resolveSourceDisplay(
   sourceRaw: string,
   authIndex: unknown,
   sourceInfoMap: SourceInfoMap,
-  authFileMap: Map<string, CredentialInfo>
+  authFileMap: Map<string, CredentialInfo>,
+  provider?: unknown
 ): SourceInfo {
   const source = normalizeUsageSourceId(sourceRaw);
   const authIndexKey = normalizeAuthIndex(authIndex);
@@ -302,6 +322,11 @@ export function resolveSourceDisplay(
 
   const matchedBySource = source ? sourceInfoMap.bySource.get(source) : null;
   if (matchedBySource) return matchedBySource;
+
+  const matchedByProviderSource = source
+    ? sourceInfoMap.byProviderSource?.get(buildProviderSourceKey(provider, source))
+    : null;
+  if (matchedByProviderSource) return matchedByProviderSource;
 
   if (source) {
     return {
@@ -330,7 +355,11 @@ export function resolveSourceIdentityKey(
   sourceRaw: string,
   authIndex: unknown,
   sourceInfoMap: SourceInfoMap,
-  authFileMap: Map<string, CredentialInfo>
+  authFileMap: Map<string, CredentialInfo>,
+  provider?: unknown
 ): string {
-  return resolveSourceDisplay(sourceRaw, authIndex, sourceInfoMap, authFileMap).identityKey || '';
+  return (
+    resolveSourceDisplay(sourceRaw, authIndex, sourceInfoMap, authFileMap, provider).identityKey ||
+    ''
+  );
 }
