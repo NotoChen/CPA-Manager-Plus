@@ -100,6 +100,10 @@ jobs:
       - name: Test CPAMP
         if: steps.release.outputs.should_build == 'true'
         run: |
+          npm --workspace apps/web run test -- \
+            src/utils/usage.test.ts \
+            src/utils/sourceResolver.test.ts \
+            src/features/monitoring/model/eventRows.test.ts
           npm run type-check
           npm run manager-server:test
 
