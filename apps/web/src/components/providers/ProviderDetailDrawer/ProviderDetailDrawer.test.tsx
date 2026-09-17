@@ -78,6 +78,25 @@ const buildOpenAIRow = (provider: OpenAIProviderConfig) =>
   })[0];
 
 describe('ProviderDetailDrawer', () => {
+  it('shows the configured display name for a key-based provider', () => {
+    const row = buildProviderRows({
+      gemini: [],
+      codex: [
+        {
+          apiKey: 'codex-key',
+          displayName: 'Work Codex',
+          baseUrl: 'https://codex.example/v1',
+        },
+      ],
+      claude: [],
+      vertex: [],
+      openai: [],
+      usageByProvider: new Map() as ProviderRecentUsageMap,
+    })[0];
+
+    expect(renderDetailText(row)).toContain('ai_providers.display_name_labelWork Codex');
+  });
+
   it('shows effective OpenAI key weights, including the default and explicit zero', () => {
     const row = buildOpenAIRow({
       name: 'Weighted OpenAI',

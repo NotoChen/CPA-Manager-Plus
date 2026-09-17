@@ -29,6 +29,59 @@ beforeEach(() => {
 });
 
 describe('providersApi auth-index preservation', () => {
+  it('loads and saves display names for both shared provider config shapes', async () => {
+    mocks.get.mockResolvedValueOnce({
+      'codex-api-key': [
+        {
+          'api-key': 'codex-key',
+          'display-name': 'Work Codex',
+          'base-url': 'https://codex.example/v1',
+        },
+      ],
+    });
+
+    await expect(providersApi.getCodexConfigs()).resolves.toEqual([
+      expect.objectContaining({
+        apiKey: 'codex-key',
+        displayName: 'Work Codex',
+        baseUrl: 'https://codex.example/v1',
+      }),
+    ]);
+
+    mocks.get.mockResolvedValueOnce({ 'codex-api-key': [] });
+    mocks.put.mockResolvedValueOnce({});
+    await providersApi.saveCodexConfigs([
+      {
+        apiKey: 'codex-key',
+        displayName: 'Work Codex',
+        baseUrl: 'https://codex.example/v1',
+      },
+    ]);
+    expect(mocks.put).toHaveBeenLastCalledWith('/codex-api-key', [
+      {
+        'api-key': 'codex-key',
+        'display-name': 'Work Codex',
+        'base-url': 'https://codex.example/v1',
+      },
+    ]);
+
+    mocks.get.mockResolvedValueOnce({
+      'gemini-api-key': [{ 'api-key': 'gemini-key', 'display-name': 'Work Gemini' }],
+    });
+    await expect(providersApi.getGeminiKeys()).resolves.toEqual([
+      expect.objectContaining({ apiKey: 'gemini-key', displayName: 'Work Gemini' }),
+    ]);
+
+    mocks.get.mockResolvedValueOnce({ 'gemini-api-key': [] });
+    mocks.put.mockResolvedValueOnce({});
+    await providersApi.saveGeminiKeys([
+      { apiKey: 'gemini-key', displayName: 'Work Gemini' },
+    ]);
+    expect(mocks.put).toHaveBeenLastCalledWith('/gemini-api-key', [
+      { 'api-key': 'gemini-key', 'display-name': 'Work Gemini' },
+    ]);
+  });
+
   it('normalizes credential weights without collapsing explicit zero into omission', async () => {
     mocks.get.mockResolvedValueOnce({
       'codex-api-key': [

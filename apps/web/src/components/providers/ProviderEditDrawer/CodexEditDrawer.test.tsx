@@ -172,6 +172,39 @@ describe('CodexEditDrawer load baseline guard', () => {
     act(() => renderer!.unmount());
   });
 
+  it('loads and saves the provider display name', async () => {
+    mocks.fetchConfig.mockResolvedValueOnce([
+      {
+        apiKey: 'codex-key',
+        displayName: 'Old account name',
+        baseUrl: 'https://api.openai.com/v1',
+      },
+    ]);
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <CodexEditDrawer open editIndex={0} disabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+    });
+
+    const displayNameInput = renderer!.root
+      .findAllByType('input')
+      .find((input) => input.props.value === 'Old account name');
+    expect(displayNameInput).toBeDefined();
+
+    act(() => displayNameInput?.props.onChange({ target: { value: 'New account name' } }));
+    await act(async () => {
+      await findSaveButton(renderer!.root)?.props.onClick();
+    });
+
+    expect(mocks.updateCodexConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ displayName: 'Old account name' }),
+      expect.objectContaining({ displayName: 'New account name' })
+    );
+
+    act(() => renderer!.unmount());
+  });
+
   it.each([
     [undefined, 'enabled', false],
     [true, 'inherit', null],

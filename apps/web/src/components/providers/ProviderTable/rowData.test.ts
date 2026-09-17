@@ -45,6 +45,24 @@ describe('buildProviderRows', () => {
     expect(rows[1].originalIndex).toBe(1);
   });
 
+  it('uses a configured display name for key-based provider labels, sorting and search', () => {
+    const rows = buildProviderRows({
+      ...emptyInput,
+      codex: [
+        {
+          apiKey: 'sk-secret-key',
+          displayName: 'Work AnyRouter',
+          baseUrl: 'https://anyrouter.example/v1',
+        },
+      ],
+    });
+
+    expect(rows[0].label).toBe('Work AnyRouter');
+    expect(rows[0].sortName).toBe('Work AnyRouter');
+    expect(rows[0].haystack).toContain('work anyrouter');
+    expect(rows[0].label).not.toContain('sk-secret-key');
+  });
+
   it('maps xAI API key configs as a distinct provider kind', () => {
     const rows = buildProviderRows({
       ...emptyInput,
