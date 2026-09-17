@@ -45,15 +45,27 @@ jobs:
           if git merge-base --is-ancestor "${upstream_sha}" HEAD; then
             changed=false
           else
-            git merge --no-edit "upstream/${UPSTREAM_BRANCH}"
-            git rm -r --ignore-unmatch .github/workflows
+            merge_exit=0
+            git merge --no-edit --no-commit "upstream/${UPSTREAM_BRANCH}" || merge_exit=$?
+            if [ "${merge_exit}" -gt 1 ]; then
+              echo "Upstream merge failed before conflict resolution (exit ${merge_exit})." >&2
+              exit "${merge_exit}"
+            fi
+
+            git rm -r -f --ignore-unmatch .github/workflows
             if git ls-tree -d --name-only "${personal_sha}" .github/workflows | grep -q '^.github/workflows$'; then
               git checkout "${personal_sha}" -- .github/workflows
             fi
             git add -A .github/workflows
-            if ! git diff --cached --quiet; then
-              git commit --amend --no-edit
+
+            unresolved="$(git diff --name-only --diff-filter=U)"
+            if [ -n "${unresolved}" ]; then
+              echo 'Upstream merge has unresolved source conflicts:' >&2
+              printf '%s\n' "${unresolved}" >&2
+              exit 1
             fi
+
+            git commit --no-edit
             changed=true
           fi
 
