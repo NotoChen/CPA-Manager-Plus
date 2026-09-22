@@ -731,6 +731,7 @@ export function CodexEditDrawer({
     form.authIndex,
     form.baseUrl,
     form.disableCooling,
+    form.displayName,
     form.excludedText,
     form.headers,
     form.modelEntries,
