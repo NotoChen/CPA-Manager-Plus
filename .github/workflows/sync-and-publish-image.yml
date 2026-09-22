@@ -78,6 +78,7 @@ jobs:
             git add -A .github/workflows
 
             auto_resolve_paths=(
+              apps/web/src/components/providers/ProviderTable/rowData.ts
               apps/web/src/features/monitoring/model/eventRows.ts
               apps/web/src/features/monitoring/model/sourceDisplay.ts
               apps/web/src/utils/sourceResolver.ts
@@ -94,7 +95,19 @@ jobs:
                 fi
               done
               if [ "${allowed}" = 'true' ]; then
-                if git ls-files -u -- "${conflict_path}" | awk '$3 == 3 { found=1 } END { exit !found }'; then
+                if [ "${conflict_path}" = 'apps/web/src/components/providers/ProviderTable/rowData.ts' ]; then
+                  git checkout --theirs -- "${conflict_path}"
+                  resolver_output=""
+                  if ! resolver_output="$(node bin/release/restore-provider-display-name.mjs "${conflict_path}" 2>&1)"; then
+                    {
+                      echo "Official release ${official_version} could not restore provider display-name behavior:"
+                      printf '%s\n' "${resolver_output}"
+                    } | tee "${failure_report}" >&2
+                    exit 1
+                  fi
+                  printf '%s\n' "${resolver_output}"
+                  git add -- "${conflict_path}"
+                elif git ls-files -u -- "${conflict_path}" | awk '$3 == 3 { found=1 } END { exit !found }'; then
                   git checkout --theirs -- "${conflict_path}"
                   git add -- "${conflict_path}"
                 else
