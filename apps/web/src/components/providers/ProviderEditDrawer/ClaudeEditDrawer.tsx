@@ -47,7 +47,7 @@ import {
   getCredentialWeightError,
   normalizeCredentialWeight,
 } from '@/utils/credentialWeight';
-import type { ModelInfo } from '@/utils/models';
+import { modelDisplayLabel, type ModelInfo } from '@/utils/models';
 import styles from '@/features/aiProviders/AiProvidersPage.module.scss';
 
 interface ClaudeEditDrawerProps {
@@ -316,9 +316,9 @@ export function ClaudeEditDrawer({
     if (!filter) return discoveredModels;
     return discoveredModels.filter((model) => {
       const name = (model.name || '').toLowerCase();
-      const alias = (model.alias || '').toLowerCase();
+      const label = modelDisplayLabel(model).toLowerCase();
       const description = (model.description || '').toLowerCase();
-      return name.includes(filter) || alias.includes(filter) || description.includes(filter);
+      return name.includes(filter) || label.includes(filter) || description.includes(filter);
     });
   }, [discoveredModels, modelDiscoverySearch]);
 
@@ -1074,6 +1074,7 @@ export function ClaudeEditDrawer({
                   <div className={styles.modelDiscoveryList}>
                     {discoveredModelsFiltered.map((model) => {
                       const checked = modelDiscoverySelected.has(model.name);
+                      const discoveryLabel = modelDisplayLabel(model);
                       const alreadyConfigured = configuredModelNames.has(
                         model.name.trim().toLowerCase()
                       );
@@ -1095,9 +1096,9 @@ export function ClaudeEditDrawer({
                               <div className={styles.modelDiscoveryName}>
                                 <div className={styles.modelDiscoveryNameText}>
                                   {model.name}
-                                  {model.alias && (
+                                  {discoveryLabel && (
                                     <span className={styles.modelDiscoveryAlias}>
-                                      {model.alias}
+                                      {discoveryLabel}
                                     </span>
                                   )}
                                 </div>
