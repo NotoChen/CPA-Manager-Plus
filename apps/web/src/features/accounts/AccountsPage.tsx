@@ -5629,7 +5629,6 @@ export function AccountsPage() {
                 [storeKey]: {
                   ...base,
                   rateLimitResetCreditsAvailableCount: merged.rateLimitResetCreditsAvailableCount,
-                 resetCreditsCountSource: merged.resetCreditsCountSource,
                   resetCreditsCountSource: merged.resetCreditsCountSource,
                   rateLimitResetCredits: merged.rateLimitResetCredits,
                   rateLimitResetCreditsError: merged.rateLimitResetCreditsError,
