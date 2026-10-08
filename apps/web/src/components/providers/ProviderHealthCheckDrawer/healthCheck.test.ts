@@ -188,6 +188,32 @@ describe('provider health check model', () => {
     );
   });
 
+  it('health-checks a keyless OpenAI provider without requiring a credential or injecting a token', async () => {
+    mocks.fetchModelsViaApiCall.mockResolvedValueOnce([{ name: 'local-model' }]);
+    const rows = buildProviderRows({
+      gemini: [],
+      codex: [],
+      claude: [],
+      vertex: [],
+      openai: [{
+        name: 'local-anonymous',
+        baseUrl: 'http://localhost:11434/v1',
+        apiKeyEntries: [],
+        authIndex: 'auto-assigned-cpa-index',
+      }],
+      usageByProvider: emptyUsageByProvider,
+    });
+    const [item] = buildProviderHealthCheckItems(rows);
+
+    await expect(runProviderHealthCheckItem(rows, item)).resolves.toMatchObject({
+      status: 'success',
+      modelCount: 1,
+    });
+    expect(mocks.fetchModelsViaApiCall).toHaveBeenCalledWith(
+      'http://localhost:11434/v1', undefined, {}, undefined, undefined
+    );
+  });
+
   it('uses the selected OpenAI key entry proxy for health checks', async () => {
     mocks.fetchModelsViaApiCall.mockResolvedValueOnce([{ name: 'gpt-4.1' }]);
     const rows = buildProviderRows({

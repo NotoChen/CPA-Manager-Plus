@@ -98,9 +98,7 @@ export function AiProvidersOpenAIEditPage() {
     !hasInvalidWeight &&
     !hasInvalidThinkingLevels(form.modelEntries);
   const hasConfiguredModels = form.modelEntries.some((entry) => entry.name.trim());
-  const hasTestableKeys = form.apiKeyEntries.some(
-    (entry) => entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex)
-  );
+  const hasTestableKeys = form.apiKeyEntries.length > 0;
   const modelSelectOptions = useMemo(() => {
     const seen = new Set<string>();
     return form.modelEntries.reduce<Array<{ value: string; label: string }>>((acc, entry) => {
@@ -159,13 +157,7 @@ export function AiProvidersOpenAIEditPage() {
 
       const keyEntry = form.apiKeyEntries[keyIndex];
       const keyAuthIndex = normalizeAuthIndex(keyEntry?.authIndex) ?? undefined;
-      if (!keyEntry?.apiKey?.trim() && !keyAuthIndex) {
-        setDraftKeyTestStatus(keyIndex, {
-          status: 'error',
-          message: t('notification.openai_test_key_required'),
-        });
-        return false;
-      }
+      if (!keyEntry) return false;
 
       const modelName = testModel.trim() || availableModels[0] || '';
       if (!modelName) {
@@ -179,9 +171,11 @@ export function AiProvidersOpenAIEditPage() {
         ...customHeaders,
       };
       if (!hasHeader(headers, 'authorization')) {
-        headers.Authorization = keyAuthIndex
-          ? 'Bearer $TOKEN$'
-          : `Bearer ${keyEntry.apiKey.trim()}`;
+        if (keyAuthIndex) {
+          headers.Authorization = 'Bearer $TOKEN$';
+        } else if (keyEntry.apiKey.trim()) {
+          headers.Authorization = `Bearer ${keyEntry.apiKey.trim()}`;
+        }
       }
 
       // Set loading state for this key
@@ -285,12 +279,9 @@ export function AiProvidersOpenAIEditPage() {
         entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex) ? index : -1
       )
       .filter((index) => index >= 0);
-    if (validKeyIndexes.length === 0) {
-      const message = t('notification.openai_test_key_required');
-      setTestStatus('error');
-      setTestMessage(message);
-      showNotification(message, 'error');
-      return;
+    // An empty row represents an anonymous upstream.
+    if (validKeyIndexes.length === 0 && form.apiKeyEntries.length > 0) {
+      validKeyIndexes.push(0);
     }
 
     setIsTestingKeys(true);
@@ -414,9 +405,7 @@ export function AiProvidersOpenAIEditPage() {
           {list.map((entry, index) => {
             const keyStatus = keyTestStatuses[index]?.status ?? 'idle';
             const weightError = getCredentialWeightError(entry.weight);
-            const canTestKey =
-              Boolean(entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex)) &&
-              hasConfiguredModels;
+            const canTestKey = hasConfiguredModels;
 
             return (
               <div key={index} className={styles.keyTableRow}>

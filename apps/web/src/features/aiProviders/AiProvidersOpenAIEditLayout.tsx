@@ -28,6 +28,7 @@ import { normalizeAuthIndex } from '@/utils/authIndex';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { areKeyValueEntriesEqual, areModelEntriesEqual } from '@/utils/compare';
 import { buildApiKeyEntry, toCommittedOpenAIProviderSnapshot } from '@/components/providers/utils';
+import { hasOpenAIKeyEntryConfiguration } from '@/utils/openAIKeyEntries';
 import {
   buildProviderDraftKey,
   parseProviderIndexParam,
@@ -532,7 +533,7 @@ export function AiProvidersOpenAIEditLayout() {
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         headers: buildHeaderObject(form.headers),
-        apiKeyEntries: form.apiKeyEntries.map((entry) => ({
+        apiKeyEntries: form.apiKeyEntries.filter(hasOpenAIKeyEntryConfiguration).map((entry) => ({
           apiKey: entry.apiKey.trim(),
           weight: normalizeCredentialWeight(entry.weight),
           proxyUrl: entry.proxyUrl?.trim() || undefined,

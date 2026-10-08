@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   showNotification: vi.fn(),
   updateOpenAIProvider: vi.fn(),
   createOpenAIProvider: vi.fn(),
+  apiCallRequest: vi.fn(),
 }));
 
 vi.mock('@/stores', () => ({
@@ -58,7 +59,7 @@ vi.mock('@/components/ui/Modal', () => ({
 }));
 
 vi.mock('@/services/api', () => ({
-  apiCallApi: { request: vi.fn() },
+  apiCallApi: { request: mocks.apiCallRequest },
   getApiCallErrorDetails: vi.fn(() => ''),
   modelsApi: { fetchModelsViaApiCall: mocks.fetchModelsViaApiCall },
   providersApi: {
@@ -97,6 +98,49 @@ describe('OpenAIEditDrawer model discovery', () => {
     mocks.fetchModelsViaApiCall.mockResolvedValue([]);
     mocks.updateOpenAIProvider.mockResolvedValue(undefined);
     mocks.createOpenAIProvider.mockResolvedValue(undefined);
+    mocks.apiCallRequest.mockResolvedValue({ statusCode: 200, body: '{}' });
+  });
+
+  it('tests and saves an OpenAI-compatible provider without an API key', async () => {
+    mocks.getOpenAIProviders.mockResolvedValue([{
+      name: 'local-anonymous',
+      baseUrl: 'http://localhost:11434/v1',
+      apiKeyEntries: [],
+      models: [{ name: 'local-model' }],
+    }]);
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <OpenAIEditDrawer open editIndex={0} disabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+    });
+
+    const testLabel = i18n.t('ai_providers.openai_test_single_action');
+    const testButton = renderer!.root.findAllByType('button').find((button) =>
+      button.findAllByType('span').some((span) => span.children.join('') === testLabel)
+    );
+    expect(testButton).toBeDefined();
+    expect(testButton?.props.disabled).not.toBe(true);
+    await act(async () => {
+      await testButton?.props.onClick();
+    });
+
+    expect(mocks.apiCallRequest).toHaveBeenCalledTimes(1);
+    const request = mocks.apiCallRequest.mock.calls[0][0] as {
+      authIndex?: string;
+      header?: Record<string, string>;
+    };
+    expect(request.header).toEqual({ 'Content-Type': 'application/json' });
+    expect(request.authIndex).toBeUndefined();
+
+    await act(async () => {
+      await findSaveButton(renderer!.root)?.props.onClick();
+    });
+    expect(mocks.updateOpenAIProvider).toHaveBeenCalledWith(
+      'local-anonymous', 0, expect.objectContaining({ apiKeyEntries: [] })
+    );
+    act(() => renderer!.unmount());
   });
 
   it('uses the proxy from the first valid credential when an earlier row is empty', async () => {

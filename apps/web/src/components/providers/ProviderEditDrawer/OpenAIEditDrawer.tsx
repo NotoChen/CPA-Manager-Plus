@@ -22,6 +22,7 @@ import {
 } from '@/types';
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { normalizeAuthIndex } from '@/utils/authIndex';
+import { hasOpenAIKeyEntryConfiguration } from '@/utils/openAIKeyEntries';
 import { areKeyValueEntriesEqual, areModelEntriesEqual } from '@/utils/compare';
 import {
   cloneModelEntry,
@@ -216,9 +217,7 @@ export function OpenAIEditDrawer({
     [form.modelEntries]
   );
   const hasConfiguredModels = form.modelEntries.some((entry) => entry.name.trim());
-  const hasTestableKeys = form.apiKeyEntries.some(
-    (entry) => entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex)
-  );
+  const hasTestableKeys = form.apiKeyEntries.length > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -497,14 +496,7 @@ export function OpenAIEditDrawer({
       }
       const keyEntry = form.apiKeyEntries[keyIndex];
       const keyAuthIndex = normalizeAuthIndex(keyEntry?.authIndex) ?? undefined;
-      if (!keyEntry?.apiKey?.trim() && !keyAuthIndex) {
-        setKeyTestStatuses((prev) => {
-          const next = [...prev];
-          next[keyIndex] = { status: 'error', message: t('notification.openai_test_key_required') };
-          return next;
-        });
-        return false;
-      }
+      if (!keyEntry) return false;
       const modelName = testModel.trim() || availableModels[0] || '';
       if (!modelName) {
         showNotification(t('notification.openai_test_model_required'), 'error');
@@ -516,9 +508,11 @@ export function OpenAIEditDrawer({
         ...customHeaders,
       };
       if (!hasHeader(headers, 'authorization')) {
-        headers.Authorization = keyAuthIndex
-          ? 'Bearer $TOKEN$'
-          : `Bearer ${keyEntry.apiKey.trim()}`;
+        if (keyAuthIndex) {
+          headers.Authorization = 'Bearer $TOKEN$';
+        } else if (keyEntry.apiKey.trim()) {
+          headers.Authorization = `Bearer ${keyEntry.apiKey.trim()}`;
+        }
       }
       setKeyTestStatuses((prev) => {
         const next = [...prev];
@@ -610,9 +604,8 @@ export function OpenAIEditDrawer({
         entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex) ? index : -1
       )
       .filter((index) => index >= 0);
-    if (validKeyIndexes.length === 0) {
-      showNotification(t('notification.openai_test_key_required'), 'error');
-      return;
+    if (validKeyIndexes.length === 0 && form.apiKeyEntries.length > 0) {
+      validKeyIndexes.push(0);
     }
     setIsTestingKeys(true);
     setTestStatus('loading');
@@ -655,16 +648,6 @@ export function OpenAIEditDrawer({
       showNotification(t('notification.openai_provider_required'), 'error');
       return;
     }
-    const hasValidKey = form.apiKeyEntries.some(
-      (entry) => entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex)
-    );
-    if (!hasValidKey) {
-      showNotification(
-        t('ai_providers.openai_key_required', { defaultValue: 'Please add at least one API key' }),
-        'error'
-      );
-      return;
-    }
     if (!canSave) return;
     setSaving(true);
     try {
@@ -673,7 +656,7 @@ export function OpenAIEditDrawer({
         prefix: form.prefix?.trim() || undefined,
         baseUrl,
         headers: buildHeaderObject(form.headers),
-        apiKeyEntries: form.apiKeyEntries.map((entry) => ({
+        apiKeyEntries: form.apiKeyEntries.filter(hasOpenAIKeyEntryConfiguration).map((entry) => ({
           apiKey: entry.apiKey.trim(),
           weight: normalizeCredentialWeight(entry.weight),
           proxyUrl: entry.proxyUrl?.trim() || undefined,
@@ -806,9 +789,7 @@ export function OpenAIEditDrawer({
           {list.map((entry, index) => {
             const keyStatus = keyTestStatuses[index]?.status ?? 'idle';
             const weightError = getCredentialWeightError(entry.weight);
-            const canTestKey =
-              Boolean(entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex)) &&
-              hasConfiguredModels;
+            const canTestKey = hasConfiguredModels;
             return (
               <div key={index} className={styles.keyTableRow}>
                 <div className={styles.keyTableColIndex}>{index + 1}</div>

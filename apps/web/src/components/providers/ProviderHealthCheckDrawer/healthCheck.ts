@@ -444,12 +444,11 @@ export const runProviderHealthCheckItem = async (
       modelCount = await testVertexByStandardModelsEndpoints(target.config);
     } else if (target.kind === 'openai') {
       const entry = target.config.apiKeyEntries?.[target.keyIndex];
-      const authIndex =
-        normalizeAuthIndex(entry?.authIndex ?? target.config.authIndex) ?? undefined;
-      requireCredential(entry?.apiKey, authIndex, {
-        ...(target.config.headers ?? {}),
-        ...(entry?.headers ?? {}),
-      });
+      // CPA may assign an auth-index to keyless providers with no key
+      // entries. Only use an auth-index when an explicit entry exists.
+      const authIndex = entry
+        ? normalizeAuthIndex(entry.authIndex ?? target.config.authIndex) ?? undefined
+        : undefined;
       const headers = { ...(target.config.headers ?? {}), ...(entry?.headers ?? {}) };
       const hasAuthHeader = hasHeader(headers, 'authorization');
       const models = await modelsApi.fetchModelsViaApiCall(
