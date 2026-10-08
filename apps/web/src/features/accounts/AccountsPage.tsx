@@ -6420,6 +6420,8 @@ export function AccountsPage() {
           // generation and must prevent stale verifier errors/results from
           // producing UI writes or reset side effects.
           const key = CODEX_CONFIG.getStoreKey?.(row.raw) ?? row.fileName;
+          const supersededResetRequest =
+            codexResetCreditDetailRequestsRef.current.get(key)?.isCurrent() === true;
           beginAccountQuotaRequest(
             quotaRequestVersionsRef.current,
             `${CODEX_CONFIG.type}:reset-credits:${key}`
@@ -6434,6 +6436,15 @@ export function AccountsPage() {
           const outcome = toAccountQuotaRefreshOutcome(result);
           if (!result || result.status !== 'success') return outcome;
           const refreshedQuota = result.state;
+          if (mode === 'summary' && supersededResetRequest) {
+            // The refresh intentionally invalidated an in-flight dedicated read.
+            // Do not immediately recreate the exact same automatic reconciliation
+            // from the resulting stale signature; explicit reset verification
+            // remains free to issue a fresh dedicated request.
+            codexResetCreditAutoFetchAttemptedSignaturesRef.current.add(
+              buildCodexResetCreditAutoFetchSignature(row.selectionKey, refreshedQuota)
+            );
+          }
           const healthyQuota = isKnownHealthyCodexQuota(refreshedQuota);
           invalidateCodexCredentialStatusForSelectionKeys([row.selectionKey], {
             supersedeAuthenticationActionEvidence: true,
