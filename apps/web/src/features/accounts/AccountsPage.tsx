@@ -6415,16 +6415,16 @@ export function AccountsPage() {
       };
       switch (row.provider) {
         case CODEX_CONFIG.type: {
-          if (mode === 'detail') {
-            // A complete refresh includes a dedicated reset-credit observation,
-            // superseding any earlier standalone detail fetch for this credential.
-            const key = CODEX_CONFIG.getStoreKey?.(row.raw) ?? row.fileName;
-            beginAccountQuotaRequest(
-              quotaRequestVersionsRef.current,
-              `${CODEX_CONFIG.type}:reset-credits:${key}`
-            );
-            codexResetCreditDetailRequestsRef.current.delete(key);
-          }
+          // Any quota refresh supersedes an in-flight reset-credit verification
+          // for this credential. Summary refreshes can also establish a newer
+          // generation and must prevent stale verifier errors/results from
+          // producing UI writes or reset side effects.
+          const key = CODEX_CONFIG.getStoreKey?.(row.raw) ?? row.fileName;
+          beginAccountQuotaRequest(
+            quotaRequestVersionsRef.current,
+            `${CODEX_CONFIG.type}:reset-credits:${key}`
+          );
+          codexResetCreditDetailRequestsRef.current.delete(key);
           const config = mode === 'detail' ? CODEX_CONFIG : CODEX_SUMMARY_CONFIG;
           const result = await refreshWithConfig(
             config,

@@ -180,16 +180,17 @@ export const mergeCodexResetCreditsEvidence = (
   const isFullDetail =
     options?.isFullDetailObservation ??
     (!incoming.rateLimitResetCreditsError && incomingDetailEvidence != null);
-
-  const previousSource: 'summary' | 'dedicated' = previousState?.resetCreditsCountSource ??
+  const previousSource: 'summary' | 'dedicated' =
+    previousState?.resetCreditsCountSource ??
     (resolveCodexResetCreditsDetailEvidenceAtMs(previousState) !== null ? 'dedicated' : 'summary');
+
   if (isFullDetail) {
-    const observedAt =
-      incomingDetailEvidence ?? incoming.observedAtMs ?? Date.now();
+    const observedAt = incomingDetailEvidence ?? incoming.observedAtMs ?? Date.now();
     const previousDetailAt = resolveCodexResetCreditsDetailEvidenceAtMs(previousState);
     if (previousDetailAt !== null && observedAt < previousDetailAt) {
       return {
-        rateLimitResetCreditsAvailableCount: previousState?.rateLimitResetCreditsAvailableCount ?? null,
+        rateLimitResetCreditsAvailableCount:
+          previousState?.rateLimitResetCreditsAvailableCount ?? null,
         resetCreditsCountSource: previousSource,
         rateLimitResetCredits: previousState?.rateLimitResetCredits ?? [],
         rateLimitResetCreditsError: previousState?.rateLimitResetCreditsError ?? null,
@@ -199,6 +200,7 @@ export const mergeCodexResetCreditsEvidence = (
         resetCreditsDetailStale: previousState?.resetCreditsDetailStale ?? false,
       };
     }
+
     const count =
       resolveCodexResetCreditsObservationCount(
         incoming.rateLimitResetCreditsAvailableCount,
@@ -206,14 +208,10 @@ export const mergeCodexResetCreditsEvidence = (
       ) ?? (previousState?.rateLimitResetCreditsAvailableCount ?? null);
     const countEvidence =
       incoming.resetCreditsCountEvidenceAtMs ?? incoming.resetCreditsEvidenceAtMs ?? observedAt;
-    const effectiveCredits =
-      count === 0
-        ? []
-        : (incoming.rateLimitResetCredits ?? []);
     return {
       rateLimitResetCreditsAvailableCount: count,
       resetCreditsCountSource: 'dedicated',
-      rateLimitResetCredits: effectiveCredits,
+      rateLimitResetCredits: count === 0 ? [] : (incoming.rateLimitResetCredits ?? []),
       rateLimitResetCreditsError: null,
       resetCreditsEvidenceAtMs: observedAt,
       resetCreditsCountEvidenceAtMs: countEvidence,
@@ -222,7 +220,6 @@ export const mergeCodexResetCreditsEvidence = (
     };
   }
 
-  // Not a full detail observation (summary refresh, or full refresh where reset credits endpoint failed)
   const incomingCount = incoming.rateLimitResetCreditsAvailableCount;
   const detailError = incoming.rateLimitResetCreditsError ?? null;
   const oldCount = previousState?.rateLimitResetCreditsAvailableCount ?? null;
@@ -239,7 +236,6 @@ export const mergeCodexResetCreditsEvidence = (
   const incomingCountEvidence =
     incoming.resetCreditsCountEvidenceAtMs ?? incoming.observedAtMs ?? Date.now();
 
-  // 1. New count was not observed in this request
   if (!hasNewCountObservation && incomingCount == null) {
     return {
       rateLimitResetCreditsAvailableCount: oldCount,
@@ -249,84 +245,78 @@ export const mergeCodexResetCreditsEvidence = (
       resetCreditsEvidenceAtMs: previousState?.resetCreditsEvidenceAtMs ?? null,
       resetCreditsCountEvidenceAtMs: oldCountEvidence,
       resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
-      resetCreditsDetailStale: oldDetailStale,
+      resetCreditsDetailStale: oldDetailStale || detailError !== null,
     };
   }
 
-  // A late count-only result must not roll back a newer dedicated observation.
-  if (incoming.resetCreditsCountSource === 'dedicated' &&
-      previousSource === 'dedicated' &&
-      oldCountEvidence !== null && incomingCountEvidence < oldCountEvidence) {
+  // A direct observation from the dedicated reset-credit endpoint is
+  // authoritative even when it returns only available_count and omits credits[].
+  if (incomingCount === 0 && incoming.resetCreditsCountSource === 'dedicated') {
     return {
-      rateLimitResetCreditsAvailableCount: oldCount,
-      resetCreditsCountSource: previousSource,
-      rateLimitResetCredits: oldCredits,
-      rateLimitResetCreditsError: detailError,
-      resetCreditsEvidenceAtMs: previousState?.resetCreditsEvidenceAtMs ?? oldCountEvidence,
-      resetCreditsCountEvidenceAtMs: oldCountEvidence,
-      resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
-      resetCreditsDetailStale: oldDetailStale,
-    };
-  }
-
-  // A summary may lag the dedicated reset-credit inventory. Keep the last
-  // verified observation and request reconciliation instead of erasing it.
-  if (
-    !isFullDetail &&
-    incoming.resetCreditsCountSource !== 'dedicated' &&
-    previousSource === 'dedicated' &&
-    incomingCount !== null &&
-    incomingCount !== undefined &&
-    oldCount !== null &&
-    incomingCount !== oldCount
-  ) {
-    return {
-      rateLimitResetCreditsAvailableCount: oldCount,
-      resetCreditsCountSource: previousSource,
-      rateLimitResetCredits: oldCredits,
+      rateLimitResetCreditsAvailableCount: 0,
+      resetCreditsCountSource: 'dedicated',
+      rateLimitResetCredits: [],
       rateLimitResetCreditsError: detailError,
       resetCreditsEvidenceAtMs: incomingCountEvidence,
+      resetCreditsCountEvidenceAtMs: incomingCountEvidence,
+      resetCreditsDetailEvidenceAtMs: null,
+      resetCreditsDetailStale: false,
+    };
+  }
+
+  // A summary/count-only zero is provisional when any positive local evidence exists.
+  const hasTrustedPositiveDetail = oldCredits.length > 0 && oldDetailEvidence !== null;
+  const hasKnownPositiveCount = oldCount !== null && oldCount > 0;
+  if (incomingCount === 0 && (hasTrustedPositiveDetail || hasKnownPositiveCount)) {
+    return {
+      rateLimitResetCreditsAvailableCount:
+        oldCount !== null && oldCount > 0 ? oldCount : oldCredits.length,
+      resetCreditsCountSource: previousSource,
+      rateLimitResetCredits: oldCredits,
+      rateLimitResetCreditsError: detailError,
+      resetCreditsEvidenceAtMs: Math.max(
+        previousState?.resetCreditsEvidenceAtMs ?? 0,
+        incomingCountEvidence
+      ),
       resetCreditsCountEvidenceAtMs: oldCountEvidence,
       resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
       resetCreditsDetailStale: true,
     };
   }
 
-  // 2. Zero without verified detail is a provisional summary observation.
   if (incomingCount === 0) {
     return {
       rateLimitResetCreditsAvailableCount: 0,
-      resetCreditsCountSource: incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : 'summary',
+      resetCreditsCountSource:
+        incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : 'summary',
       rateLimitResetCredits: [],
       rateLimitResetCreditsError: detailError,
       resetCreditsEvidenceAtMs: incomingCountEvidence,
       resetCreditsCountEvidenceAtMs: incomingCountEvidence,
       resetCreditsDetailEvidenceAtMs: null,
-      resetCreditsDetailStale: incoming.resetCreditsCountSource !== 'dedicated',
+      resetCreditsDetailStale: false,
     };
   }
 
-  // 3. New count equals old count (and count > 0)
   if (oldCount !== null && incomingCount === oldCount) {
     return {
       rateLimitResetCreditsAvailableCount: incomingCount,
-      resetCreditsCountSource: incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : previousSource,
+      resetCreditsCountSource:
+        incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : previousSource,
       rateLimitResetCredits: oldCredits,
       rateLimitResetCreditsError: detailError,
       resetCreditsEvidenceAtMs:
         previousState?.resetCreditsEvidenceAtMs ?? oldDetailEvidence ?? incomingCountEvidence,
-      resetCreditsCountEvidenceAtMs:
-        previousSource === 'dedicated' && incoming.resetCreditsCountSource !== 'dedicated'
-          ? oldCountEvidence : incomingCountEvidence,
+      resetCreditsCountEvidenceAtMs: incomingCountEvidence,
       resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
-      resetCreditsDetailStale: oldDetailStale,
+      resetCreditsDetailStale: oldDetailStale || detailError !== null,
     };
   }
 
-  // 4. New count changed and count > 0
   return {
     rateLimitResetCreditsAvailableCount: incomingCount ?? null,
-    resetCreditsCountSource: incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : 'summary',
+    resetCreditsCountSource:
+      incoming.resetCreditsCountSource === 'dedicated' ? 'dedicated' : 'summary',
     rateLimitResetCredits: [],
     rateLimitResetCreditsError: detailError,
     resetCreditsEvidenceAtMs:
@@ -343,11 +333,11 @@ export const shouldAutoFetchCodexResetCreditDetails = (
 ): boolean => {
   if (!quota) return false;
   const count = quota.rateLimitResetCreditsAvailableCount;
-  // Stale zero/unknown counts must be retried too, otherwise externally
-  // granted resets can never be discovered from the account list.
-  if (quota.resetCreditsDetailStale === true) return true;
   if (typeof count !== 'number' || !Number.isFinite(count) || count <= 0) {
     return false;
+  }
+  if (quota.resetCreditsDetailStale === true) {
+    return true;
   }
   const detailEvidenceAtMs = resolveCodexResetCreditsDetailEvidenceAtMs(quota);
   if (detailEvidenceAtMs === null || detailEvidenceAtMs <= 0) {
