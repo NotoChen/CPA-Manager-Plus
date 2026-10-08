@@ -1745,6 +1745,7 @@ func TestRateLimitAutoDisableWorkerEarlyRecoveryIsEventDriven(t *testing.T) {
 	}
 	defer st.Close()
 
+	disabled := true
 	patchCalls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method + " " + r.URL.Path {
@@ -1756,7 +1757,7 @@ func TestRateLimitAutoDisableWorkerEarlyRecoveryIsEventDriven(t *testing.T) {
 				"provider":   "codex",
 				"account":    "alice@example.com",
 				"account_id": "workspace-1",
-				"disabled":   true,
+				"disabled":   disabled,
 			}})
 		case "PATCH /v0/management/auth-files/status":
 			var payload struct {
@@ -1767,6 +1768,7 @@ func TestRateLimitAutoDisableWorkerEarlyRecoveryIsEventDriven(t *testing.T) {
 				return
 			}
 			patchCalls++
+			disabled = payload.Disabled
 			if payload.Disabled {
 				http.Error(w, "expected enable", http.StatusBadRequest)
 				return
@@ -1951,6 +1953,7 @@ func TestRateLimitAutoDisableWorkerRecoversLegacyCodexCooldownWithoutIdentityEvi
 	}
 	defer st.Close()
 
+	disabled := true
 	patchCalls := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method + " " + r.URL.Path {
@@ -1962,7 +1965,7 @@ func TestRateLimitAutoDisableWorkerRecoversLegacyCodexCooldownWithoutIdentityEvi
 				"provider":   "codex",
 				"account":    "alice@example.com",
 				"account_id": "workspace-1",
-				"disabled":   true,
+				"disabled":   disabled,
 			}})
 		case "PATCH /v0/management/auth-files/status":
 			var payload struct {
@@ -1973,6 +1976,7 @@ func TestRateLimitAutoDisableWorkerRecoversLegacyCodexCooldownWithoutIdentityEvi
 				return
 			}
 			patchCalls++
+			disabled = payload.Disabled
 			if payload.Disabled {
 				http.Error(w, "expected enable", http.StatusBadRequest)
 				return
