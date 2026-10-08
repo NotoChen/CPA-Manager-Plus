@@ -286,41 +286,74 @@ export const mergeCodexResetCreditsFromQuotaSnapshots = (
   const activeCountObservedAt = useSnapshotCount ? countObservedAt : localCountEvidenceAtMs;
   const activeCreditsObservedAt = useSnapshotCredits ? creditsObservedAt : localDetailEvidenceAtMs;
 
-  const clearCreditsFromZeroCount =
-    activeCount === 0 && activeCountObservedAt >= activeCreditsObservedAt;
+  const candidateCredits = useSnapshotCredits
+    ? (creditsSnapshot.reset_credits ?? []).map((credit) => ({
+        id: credit.id,
+        status: 'available' as const,
+        grantedAt: '',
+        expiresAt: new Date(credit.expires_at_ms).toISOString(),
+      }))
+    : (quota?.rateLimitResetCredits ?? []);
 
-  const finalCredits = clearCreditsFromZeroCount
-    ? []
-    : useSnapshotCredits
-      ? (creditsSnapshot.reset_credits ?? []).map((credit) => ({
-          id: credit.id,
-          status: 'available',
-          grantedAt: '',
-          expiresAt: new Date(credit.expires_at_ms).toISOString(),
-        }))
-      : (quota?.rateLimitResetCredits ?? []);
+  const hasExplicitEmptyDetail =
+    useSnapshotCredits &&
+    activeCreditsObservedAt > 0 &&
+    (creditsSnapshot.reset_credits ?? []).length === 0;
+  const positiveDetailConflictsWithZeroCount =
+    activeCount === 0 &&
+    candidateCredits.length > 0 &&
+    activeCreditsObservedAt > 0 &&
+    !hasExplicitEmptyDetail;
+  const localPositiveCount =
+    typeof quota?.rateLimitResetCreditsAvailableCount === 'number' &&
+    Number.isFinite(quota.rateLimitResetCreditsAvailableCount) &&
+    quota.rateLimitResetCreditsAvailableCount > 0
+      ? quota.rateLimitResetCreditsAvailableCount
+      : null;
+  const positiveCountConflictsWithZeroCount =
+    activeCount === 0 && localPositiveCount !== null && !hasExplicitEmptyDetail;
+  const unresolvedZeroConflict =
+    positiveDetailConflictsWithZeroCount || positiveCountConflictsWithZeroCount;
+
+  // A count-only zero (for example from usage summary) must not erase known
+  // positive reset-credit evidence. An explicit empty detail observation remains
+  // authoritative and can clear it.
+  const clearCreditsFromZeroCount =
+    activeCount === 0 &&
+    !unresolvedZeroConflict &&
+    activeCountObservedAt >= activeCreditsObservedAt;
+
+  const finalCredits = clearCreditsFromZeroCount ? [] : candidateCredits;
 
   const detailSupersedesCount =
-    useSnapshotCredits &&
     !clearCreditsFromZeroCount &&
-    creditsObservedAt > 0 &&
-    creditsObservedAt > activeCountObservedAt;
+    finalCredits.length > 0 &&
+    activeCreditsObservedAt > 0 &&
+    (positiveDetailConflictsWithZeroCount ||
+      activeCreditsObservedAt > activeCountObservedAt);
 
-  const finalCount = detailSupersedesCount ? finalCredits.length : activeCount;
+  const finalCount = detailSupersedesCount
+    ? finalCredits.length
+    : positiveCountConflictsWithZeroCount
+      ? localPositiveCount
+      : activeCount;
   const finalCountEvidenceAtMs = detailSupersedesCount
-    ? creditsObservedAt
-    : Math.max(
-        localCountEvidenceAtMs,
-        useSnapshotCount ? countObservedAt : 0
-      );
+    ? activeCreditsObservedAt
+    : positiveCountConflictsWithZeroCount
+      ? localCountEvidenceAtMs
+      : Math.max(
+          localCountEvidenceAtMs,
+          useSnapshotCount ? countObservedAt : 0
+        );
 
-  const finalDetailEvidenceAtMs = clearCreditsFromZeroCount
-    ? null
-    : useSnapshotCredits
-      ? creditsObservedAt
-      : localDetailEvidenceAtMs > 0
-        ? localDetailEvidenceAtMs
-        : null;
+  const finalDetailEvidenceAtMs =
+    clearCreditsFromZeroCount && !hasExplicitEmptyDetail
+      ? null
+      : useSnapshotCredits
+        ? creditsObservedAt
+        : localDetailEvidenceAtMs > 0
+          ? localDetailEvidenceAtMs
+          : null;
 
   const base: CodexQuotaState = quota ?? { status: 'success', windows: [] };
   const next: CodexQuotaState = {
@@ -329,11 +362,13 @@ export const mergeCodexResetCreditsFromQuotaSnapshots = (
     rateLimitResetCredits: finalCredits,
     resetCreditsCountEvidenceAtMs: finalCountEvidenceAtMs > 0 ? finalCountEvidenceAtMs : null,
     resetCreditsDetailEvidenceAtMs: finalDetailEvidenceAtMs,
-    resetCreditsDetailStale: clearCreditsFromZeroCount
-      ? false
-      : useSnapshotCredits
+    resetCreditsDetailStale: unresolvedZeroConflict
+      ? true
+      : clearCreditsFromZeroCount
         ? false
-        : (quota?.resetCreditsDetailStale ?? false),
+        : useSnapshotCredits
+          ? false
+          : (quota?.resetCreditsDetailStale ?? false),
     resetCreditsEvidenceAtMs: Math.max(
       localCountEvidenceAtMs,
       localDetailEvidenceAtMs,

@@ -230,11 +230,34 @@ export const mergeCodexResetCreditsEvidence = (
       resetCreditsEvidenceAtMs: previousState?.resetCreditsEvidenceAtMs ?? null,
       resetCreditsCountEvidenceAtMs: oldCountEvidence,
       resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
-      resetCreditsDetailStale: oldDetailStale,
+      resetCreditsDetailStale: oldDetailStale || detailError !== null,
     };
   }
 
-  // 2. New count = 0: definitive evidence that there are no credits available
+  // 2. A summary/count-only zero is not authoritative enough to erase
+  // previously verified reset-credit detail. Only a full detail observation can
+  // definitively prove that the inventory is empty.
+  const hasTrustedPositiveDetail = oldCredits.length > 0 && oldDetailEvidence !== null;
+  const hasKnownPositiveCount = oldCount !== null && oldCount > 0;
+  if (incomingCount === 0 && (hasTrustedPositiveDetail || hasKnownPositiveCount)) {
+    const preservedCount =
+      oldCount !== null && oldCount > 0 ? oldCount : oldCredits.length;
+    return {
+      rateLimitResetCreditsAvailableCount: preservedCount,
+      rateLimitResetCredits: oldCredits,
+      rateLimitResetCreditsError: detailError,
+      resetCreditsEvidenceAtMs: Math.max(
+        previousState?.resetCreditsEvidenceAtMs ?? 0,
+        incomingCountEvidence
+      ),
+      resetCreditsCountEvidenceAtMs: oldCountEvidence,
+      resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
+      resetCreditsDetailStale: true,
+    };
+  }
+
+  // A count-only zero can settle an unknown/unverified state. A later dedicated
+  // detail observation remains authoritative and can replace it.
   if (incomingCount === 0) {
     return {
       rateLimitResetCreditsAvailableCount: 0,
@@ -257,7 +280,7 @@ export const mergeCodexResetCreditsEvidence = (
         previousState?.resetCreditsEvidenceAtMs ?? oldDetailEvidence ?? incomingCountEvidence,
       resetCreditsCountEvidenceAtMs: incomingCountEvidence,
       resetCreditsDetailEvidenceAtMs: oldDetailEvidence,
-      resetCreditsDetailStale: oldDetailStale,
+      resetCreditsDetailStale: oldDetailStale || detailError !== null,
     };
   }
 

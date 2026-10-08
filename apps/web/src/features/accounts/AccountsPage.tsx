@@ -7200,24 +7200,35 @@ export function AccountsPage() {
               return next;
             });
 
-            // Flow: reset credit succeeds → sync CPA runtime reset → refresh quota for UI
-            const authIndex = normalizeAuthIndex(row.raw['auth_index'] ?? row.raw.authIndex ?? row.authIndex);
-            let gatewaySyncSuccess = false;
-            if (authIndex && !row.raw.disabled) {
+            // Flow: reset credit succeeds → one-shot quota verification →
+            // recover a CPAMP-owned disable (if any) → sync CPA runtime cooldown.
+            // No polling or background retry is used in this transaction.
+            const authIndex = normalizeAuthIndex(
+              row.raw['auth_index'] ?? row.raw.authIndex ?? row.authIndex
+            );
+            const wasDisabled = row.raw.disabled === true;
+            let gatewaySyncSuccess = !authIndex && !wasDisabled;
+            let credentialRecoverySuccess = !wasDisabled;
+
+            if (authIndex && !wasDisabled) {
               try {
                 await authFilesApi.resetQuota(authIndex, authFilesRequestScope);
                 gatewaySyncSuccess = true;
               } catch (resetErr) {
-                console.warn('[Accounts] Failed to reset gateway cooldown quota after consuming reset credit:', resetErr);
+                console.warn(
+                  '[Accounts] Failed to reset gateway cooldown quota after consuming reset credit:',
+                  resetErr
+                );
                 gatewaySyncSuccess = false;
               }
-            } else {
-              gatewaySyncSuccess = true;
             }
 
             let quotaRefreshSuccess = false;
+            let quotaHealthy = false;
             try {
               const data = await CODEX_CONFIG.fetchQuota(row.raw, t, authFilesRequestScope);
+              const healthState = CODEX_CONFIG.buildSuccessState(data, row.raw);
+              quotaHealthy = isKnownHealthyCodexQuota(healthState);
               if (postMutationIsCurrent()) {
                 commitIfQuotaCacheCurrent(cacheGeneration, () => {
                   setCodexQuota((prev) => {
@@ -7232,21 +7243,67 @@ export function AccountsPage() {
               }
               quotaRefreshSuccess = true;
             } catch (refreshErr) {
-              console.warn('[Accounts] Failed to refresh quota after consuming reset credit:', refreshErr);
+              console.warn(
+                '[Accounts] Failed to refresh quota after consuming reset credit:',
+                refreshErr
+              );
               quotaRefreshSuccess = false;
-            } finally {
-              endResetTransaction();
             }
+
+            if (
+              wasDisabled &&
+              quotaRefreshSuccess &&
+              quotaHealthy &&
+              authIndex &&
+              featureAvailability.managerServiceBase &&
+              managementKey
+            ) {
+              try {
+                const recovery = await usageServiceApi.recoverQuotaCooldown(
+                  featureAvailability.managerServiceBase,
+                  managementKey,
+                  {
+                    authFileName: row.fileName,
+                    authIndex,
+                    provider: 'codex',
+                  }
+                );
+                credentialRecoverySuccess = recovery.recovered === true;
+                if (credentialRecoverySuccess) {
+                  try {
+                    await authFilesApi.resetQuota(authIndex, authFilesRequestScope);
+                    gatewaySyncSuccess = true;
+                  } catch (resetErr) {
+                    console.warn(
+                      '[Accounts] Failed to reset gateway cooldown after recovering CPAMP quota disable:',
+                      resetErr
+                    );
+                    gatewaySyncSuccess = false;
+                  }
+                  await Promise.allSettled([loadFiles(), loadQuotaCooldowns()]);
+                }
+              } catch (recoverErr) {
+                console.warn(
+                  '[Accounts] Failed to recover CPAMP-owned quota cooldown after consuming reset credit:',
+                  recoverErr
+                );
+                credentialRecoverySuccess = false;
+              }
+            }
+
+            endResetTransaction();
 
             invalidateCodexCredentialStatusForSelectionKeys([row.selectionKey], {
               supersedeAuthenticationActionEvidence: true,
               supersedeQuotaActionEvidence: quotaRefreshSuccess,
-              supersedeCooldownEvidence: gatewaySyncSuccess,
+              supersedeCooldownEvidence: wasDisabled
+                ? credentialRecoverySuccess
+                : gatewaySyncSuccess,
             });
 
-            if (gatewaySyncSuccess && quotaRefreshSuccess) {
+            if (gatewaySyncSuccess && quotaRefreshSuccess && credentialRecoverySuccess) {
               showNotification(t('codex_quota.reset_success', { name: displayName }), 'success');
-            } else if (!gatewaySyncSuccess) {
+            } else if (!gatewaySyncSuccess && credentialRecoverySuccess) {
               showNotification(
                 t('codex_quota.reset_gateway_failed', {
                   name: displayName,
@@ -7269,8 +7326,12 @@ export function AccountsPage() {
       canResetCodexQuota,
       connectionFingerprint,
       getDisplayAccount,
+      featureAvailability.managerServiceBase,
       invalidateCodexCredentialStatusForSelectionKeys,
       loadCodexResetCreditDetails,
+      loadFiles,
+      loadQuotaCooldowns,
+      managementKey,
       setCodexQuota,
       showConfirmation,
       showNotification,
