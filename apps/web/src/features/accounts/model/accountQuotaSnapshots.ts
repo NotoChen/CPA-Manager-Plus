@@ -287,7 +287,7 @@ export const mergeCodexResetCreditsFromQuotaSnapshots = (
         expiresAt: new Date(credit.expires_at_ms).toISOString(),
       }))
     : localCredits;
-  let finalDetailAt = useDetail ? detailAt : localDetailAt;
+  const finalDetailAt = useDetail ? detailAt : localDetailAt;
 
   // Count/detail are independent evidence streams. Only a strictly newer
   // detail observation may derive a replacement count. Equal timestamps keep
