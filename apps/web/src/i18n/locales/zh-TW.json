@@ -1384,6 +1384,8 @@
     "health_check_key_index": "Key #{{index}}",
     "health_check_no_credential": "未設定憑據",
     "health_check_no_key_entries": "未設定 API 金鑰",
+    "usage_stats_unavailable": "統計不可用",
+    "usage_stats_partial": "部分統計",
     "health_check_error_missing_credential": "缺少 API 金鑰或 auth-index",
     "health_check_error_empty_models": "未返回模型列表",
     "health_check_error_vertex_standard_models": "未發現可用的標準模型發現介面{{reason}}",

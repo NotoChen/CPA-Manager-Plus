@@ -16,7 +16,7 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useNotificationStore } from '@/stores';
 import { apiCallApi, getApiCallErrorDetails } from '@/services/api';
 import { normalizeAuthIndex } from '@/utils/authIndex';
-import { getOpenAITestableKeyIndexes } from '@/utils/openAIKeyEntries';
+import { getOpenAIKeyCount, getOpenAITestableKeyIndexes } from '@/utils/openAIKeyEntries';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import {
@@ -373,7 +373,7 @@ export function AiProvidersOpenAIEditPage() {
       <div className={styles.keyEntriesList}>
         <div className={styles.keyEntriesToolbar}>
           <span className={styles.keyEntriesCount}>
-            {t('ai_providers.openai_keys_count')}: {list.length}
+            {t('ai_providers.openai_keys_count')}: {getOpenAIKeyCount(list)}
           </span>
           <Button
             variant="secondary"

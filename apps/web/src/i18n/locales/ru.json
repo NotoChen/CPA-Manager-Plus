@@ -1390,6 +1390,8 @@
     "health_check_key_index": "Ключ #{{index}}",
     "health_check_no_credential": "Учётные данные не настроены",
     "health_check_no_key_entries": "API-ключ не настроен",
+    "usage_stats_unavailable": "Статистика недоступна",
+    "usage_stats_partial": "Частичная статистика",
     "health_check_error_missing_credential": "Отсутствует API-ключ или выбранный аккаунт",
     "health_check_error_empty_models": "Список моделей не возвращён",
     "health_check_error_vertex_standard_models": "Стандартный адрес получения моделей не ответил{{reason}}",

@@ -23,6 +23,19 @@ export const getOpenAIModelDiscoveryEntry = <T extends OpenAIKeyEntryLike>(
   entries.find((entry) => entry.apiKey?.trim()) ??
   entries.find((entry) => hasOpenAIKeyEntryConfiguration(entry));
 
+export const getOpenAIKeyCount = (entries: OpenAIKeyEntryLike[]): number =>
+  entries.filter((entry) => entry.apiKey?.trim()).length;
+
+export type OpenAIUsageStatsCoverage = 'full' | 'partial' | 'unavailable';
+
+export const getOpenAIUsageStatsCoverage = (
+  entries: OpenAIKeyEntryLike[]
+): OpenAIUsageStatsCoverage => {
+  const keyCount = getOpenAIKeyCount(entries);
+  if (keyCount === 0) return 'unavailable';
+  return keyCount === entries.length ? 'full' : 'partial';
+};
+
 // Only configured entries are independently testable. A single blank row
 // represents the anonymous upstream if there are no configured entries.
 export const getOpenAITestableKeyIndexes = (

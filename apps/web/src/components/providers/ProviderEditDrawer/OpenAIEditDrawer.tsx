@@ -23,6 +23,7 @@ import {
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { normalizeAuthIndex } from '@/utils/authIndex';
 import {
+  getOpenAIKeyCount,
   getOpenAIModelDiscoveryEntry,
   getOpenAITestableKeyIndexes,
   hasOpenAIKeyEntryConfiguration,
@@ -762,7 +763,7 @@ export function OpenAIEditDrawer({
       <div className={styles.keyEntriesList}>
         <div className={styles.keyEntriesToolbar}>
           <span className={styles.keyEntriesCount}>
-            {t('ai_providers.openai_keys_count')}: {list.length}
+            {t('ai_providers.openai_keys_count')}: {getOpenAIKeyCount(list)}
           </span>
           <Button
             variant="secondary"

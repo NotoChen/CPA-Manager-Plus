@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getOpenAIKeyCount,
   getOpenAIModelDiscoveryEntry,
   getOpenAITestableKeyIndexes,
+  getOpenAIUsageStatsCoverage,
   hasOpenAIKeyEntryConfiguration,
 } from './openAIKeyEntries';
 
@@ -22,6 +24,19 @@ describe('OpenAI-compatible keyless editor rows', () => {
     expect(getOpenAIModelDiscoveryEntry(entries)).toBe(entries[1]);
     expect(getOpenAIModelDiscoveryEntry([{ apiKey: '', proxyUrl: 'socks5://keyless:1080' }]))
       .toEqual({ apiKey: '', proxyUrl: 'socks5://keyless:1080' });
+  });
+
+  it('counts only real API keys and reports keyless accounting coverage explicitly', () => {
+    expect(getOpenAIKeyCount([])).toBe(0);
+    expect(getOpenAIKeyCount([{ apiKey: '', proxyUrl: 'socks5://proxy:1080' }])).toBe(0);
+    expect(getOpenAIKeyCount([{ apiKey: 'k1' }, { apiKey: '', proxyUrl: 'socks5://proxy:1080' }]))
+      .toBe(1);
+
+    expect(getOpenAIUsageStatsCoverage([])).toBe('unavailable');
+    expect(getOpenAIUsageStatsCoverage([{ apiKey: '', proxyUrl: 'socks5://proxy:1080' }]))
+      .toBe('unavailable');
+    expect(getOpenAIUsageStatsCoverage([{ apiKey: 'k1' }])).toBe('full');
+    expect(getOpenAIUsageStatsCoverage([{ apiKey: 'k1' }, { apiKey: '' }])).toBe('partial');
   });
 
   it('tests exactly one anonymous request when every editor row is blank', () => {
