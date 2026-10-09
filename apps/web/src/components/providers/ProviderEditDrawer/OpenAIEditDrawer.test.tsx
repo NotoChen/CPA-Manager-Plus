@@ -245,6 +245,56 @@ describe('OpenAIEditDrawer model discovery', () => {
     act(() => renderer!.unmount());
   });
 
+  it('does not stay dirty when the API key is changed and restored after auth-index invalidation', async () => {
+    const onClose = vi.fn();
+    const originalConfirm = window.confirm;
+    const confirmMock = vi.fn(() => true);
+    window.confirm = confirmMock;
+    mocks.getOpenAIProviders.mockResolvedValueOnce([{
+      name: 'restore-key',
+      baseUrl: 'https://model.example/v1',
+      apiKeyEntries: [{
+        apiKey: 'original-key',
+        authIndex: 'server-runtime-index',
+      }],
+      models: [{ name: 'local-model' }],
+    }]);
+
+    let renderer: ReactTestRenderer;
+    try {
+      await act(async () => {
+        renderer = create(
+          <OpenAIEditDrawer open editIndex={0} disabled={false} onClose={onClose} onSaved={vi.fn()} />
+        );
+      });
+
+      const findKeyInput = () => renderer!.root.findAllByType('input').find(
+        (input) => input.props.placeholder === i18n.t('ai_providers.openai_key_placeholder')
+      );
+      act(() => {
+        findKeyInput()!.props.onChange({ target: { value: 'changed-key' } });
+      });
+      act(() => {
+        findKeyInput()!.props.onChange({ target: { value: 'original-key' } });
+      });
+
+      const cancelLabel = i18n.t('common.cancel');
+      const cancelButton = renderer!.root.findAllByType('button').find((button) =>
+        button.findAllByType('span').some((span) => span.children.join('') === cancelLabel)
+      );
+      expect(cancelButton).toBeDefined();
+      act(() => {
+        cancelButton!.props.onClick();
+      });
+
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledTimes(1);
+      act(() => renderer!.unmount());
+    } finally {
+      window.confirm = originalConfirm;
+    }
+  });
+
   it('disables testing an empty placeholder when another key is configured', async () => {
     mocks.getOpenAIProviders.mockResolvedValueOnce([{
       name: 'mixed',

@@ -146,11 +146,14 @@ const areNormalizedApiKeyEntriesEqual = (
     const left = a[i];
     const right = b[i];
     if (!left || !right) return false;
+    // auth-index is server-generated runtime identity, not user configuration.
+    // Editing a key intentionally clears it; restoring the original visible
+    // configuration must therefore not remain dirty solely because the old
+    // runtime identity is gone.
     if (
       left.apiKey !== right.apiKey ||
       left.weight !== right.weight ||
-      left.proxyUrl !== right.proxyUrl ||
-      left.authIndex !== right.authIndex
+      left.proxyUrl !== right.proxyUrl
     )
       return false;
     if (!areKeyValueEntriesEqual(left.headers, right.headers)) return false;
