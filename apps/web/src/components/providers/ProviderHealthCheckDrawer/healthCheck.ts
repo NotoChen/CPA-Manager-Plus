@@ -235,10 +235,9 @@ const buildOpenAIProviderItems = (
         providerIndex: row.originalIndex,
         providerLabel: providerDisplay.providerLabel,
         providerSubtitle: providerDisplay.providerSubtitle,
-        targetLabel: 'Key #1',
-        targetLabelKey: 'ai_providers.health_check_key_index',
-        targetLabelValues: { index: 1 },
-        detailLabel: 'No key entries',
+        targetLabel: 'No API key required',
+        targetLabelKey: 'ai_providers.health_check_no_key_entries',
+        detailLabel: 'No API key required',
         detailLabelKey: 'ai_providers.health_check_no_key_entries',
         baseUrl: row.baseUrl,
         status: 'pending',
@@ -456,7 +455,8 @@ export const runProviderHealthCheckItem = async (
         hasAuthHeader ? undefined : entry?.apiKey?.trim() || undefined,
         headers,
         authIndex,
-        entry?.proxyUrl
+        entry?.proxyUrl,
+        !entry?.apiKey?.trim()
       );
       modelCount = ensureNonEmptyModels(models);
     }

@@ -16,6 +16,7 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useNotificationStore } from '@/stores';
 import { apiCallApi, getApiCallErrorDetails } from '@/services/api';
 import { normalizeAuthIndex } from '@/utils/authIndex';
+import { getOpenAITestableKeyIndexes } from '@/utils/openAIKeyEntries';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import {
@@ -156,8 +157,8 @@ export function AiProvidersOpenAIEditPage() {
       }
 
       const keyEntry = form.apiKeyEntries[keyIndex];
-      const keyAuthIndex = normalizeAuthIndex(keyEntry?.authIndex) ?? undefined;
       if (!keyEntry) return false;
+      const keyAuthIndex = normalizeAuthIndex(keyEntry.authIndex) ?? undefined;
 
       const modelName = testModel.trim() || availableModels[0] || '';
       if (!modelName) {
@@ -171,10 +172,10 @@ export function AiProvidersOpenAIEditPage() {
         ...customHeaders,
       };
       if (!hasHeader(headers, 'authorization')) {
-        if (keyAuthIndex) {
-          headers.Authorization = 'Bearer $TOKEN$';
-        } else if (keyEntry.apiKey.trim()) {
-          headers.Authorization = `Bearer ${keyEntry.apiKey.trim()}`;
+        if (keyEntry.apiKey.trim()) {
+          headers.Authorization = keyAuthIndex
+            ? 'Bearer $TOKEN$'
+            : `Bearer ${keyEntry.apiKey.trim()}`;
         }
       }
 
@@ -185,6 +186,7 @@ export function AiProvidersOpenAIEditPage() {
         const result = await apiCallApi.request(
           {
             authIndex: keyAuthIndex,
+            proxyUrl: keyEntry.proxyUrl?.trim() || undefined,
             method: 'POST',
             url: endpoint,
             header: Object.keys(headers).length ? headers : undefined,
@@ -274,15 +276,7 @@ export function AiProvidersOpenAIEditPage() {
       return;
     }
 
-    const validKeyIndexes = form.apiKeyEntries
-      .map((entry, index) =>
-        entry.apiKey?.trim() || normalizeAuthIndex(entry.authIndex) ? index : -1
-      )
-      .filter((index) => index >= 0);
-    // An empty row represents an anonymous upstream.
-    if (validKeyIndexes.length === 0 && form.apiKeyEntries.length > 0) {
-      validKeyIndexes.push(0);
-    }
+    const validKeyIndexes = getOpenAITestableKeyIndexes(form.apiKeyEntries);
 
     setIsTestingKeys(true);
     setTestStatus('loading');
@@ -405,7 +399,8 @@ export function AiProvidersOpenAIEditPage() {
           {list.map((entry, index) => {
             const keyStatus = keyTestStatuses[index]?.status ?? 'idle';
             const weightError = getCredentialWeightError(entry.weight);
-            const canTestKey = hasConfiguredModels;
+            const canTestKey =
+              hasConfiguredModels && getOpenAITestableKeyIndexes(form.apiKeyEntries).includes(index);
 
             return (
               <div key={index} className={styles.keyTableRow}>

@@ -143,6 +143,83 @@ describe('OpenAIEditDrawer model discovery', () => {
     act(() => renderer!.unmount());
   });
 
+  it('tests and discovers models for an indexed keyless proxy without Authorization', async () => {
+    mocks.getOpenAIProviders.mockResolvedValueOnce([{
+      name: 'keyless-proxy',
+      baseUrl: 'https://model.example/v1',
+      apiKeyEntries: [{
+        apiKey: '',
+        authIndex: 'cpa-keyless-index',
+        proxyUrl: 'socks5://proxy.example:1080',
+      }],
+      models: [{ name: 'local-model' }],
+    }]);
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <OpenAIEditDrawer open editIndex={0} disabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+    });
+
+    const keyLabel = i18n.t('ai_providers.openai_test_single_action');
+    const singleTestButton = renderer!.root.findAllByType('button').find((button) =>
+      button.findAllByType('span').some((span) => span.children.join('') === keyLabel)
+    );
+    expect(singleTestButton?.props.disabled).toBe(false);
+    await act(async () => {
+      await singleTestButton?.props.onClick();
+    });
+
+    expect(mocks.apiCallRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authIndex: 'cpa-keyless-index',
+        proxyUrl: 'socks5://proxy.example:1080',
+        header: { 'Content-Type': 'application/json' },
+      }),
+      expect.anything()
+    );
+
+    await act(async () => {
+      findModelsFetchButton(renderer!.root)?.props.onClick();
+    });
+    expect(mocks.fetchModelsViaApiCall).toHaveBeenCalledWith(
+      'https://model.example/v1',
+      undefined,
+      {},
+      'cpa-keyless-index',
+      'socks5://proxy.example:1080',
+      true
+    );
+
+    act(() => renderer!.unmount());
+  });
+
+  it('disables testing an empty placeholder when another key is configured', async () => {
+    mocks.getOpenAIProviders.mockResolvedValueOnce([{
+      name: 'mixed',
+      baseUrl: 'https://model.example/v1',
+      apiKeyEntries: [{ apiKey: 'actual-key' }, { apiKey: '' }],
+      models: [{ name: 'local-model' }],
+    }]);
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <OpenAIEditDrawer open editIndex={0} disabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+    });
+
+    const keyLabel = i18n.t('ai_providers.openai_test_single_action');
+    const buttons = renderer!.root.findAllByType('button').filter((button) =>
+      button.findAllByType('span').some((span) => span.children.join('') === keyLabel)
+    );
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].props.disabled).toBe(false);
+    expect(buttons[1].props.disabled).toBe(true);
+    act(() => renderer!.unmount());
+  });
+
   it('uses the proxy from the first valid credential when an earlier row is empty', async () => {
     mocks.getOpenAIProviders.mockResolvedValueOnce([
       {
@@ -179,7 +256,8 @@ describe('OpenAIEditDrawer model discovery', () => {
       'second-key',
       {},
       'auth-second',
-      'socks5://proxy.example:1080'
+      'socks5://proxy.example:1080',
+      false
     );
 
     act(() => renderer!.unmount());

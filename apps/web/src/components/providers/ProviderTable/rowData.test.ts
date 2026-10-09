@@ -159,6 +159,42 @@ describe('buildProviderRows', () => {
     expect(openaiRow?.stats).toEqual({ success: 3, failure: 3 });
   });
 
+  it('uses real empty-key usage records once for keyless OpenAI providers', () => {
+    const baseUrl = 'https://keyless.example.com/v1';
+    const usageByProvider: ProviderRecentUsageMap = new Map([
+      ['keyless', new Map([
+        [buildRecentRequestCompositeKey(baseUrl, ''), {
+          success: 8,
+          failed: 1,
+          recentRequests: [],
+        }],
+      ])],
+    ]);
+    const rows = buildProviderRows({
+      ...emptyInput,
+      openai: [
+        { name: 'keyless', baseUrl, apiKeyEntries: [] },
+        { name: 'keyless', baseUrl, apiKeyEntries: [
+          { apiKey: '', proxyUrl: 'http://proxy-one:8080' },
+          { apiKey: '', proxyUrl: 'http://proxy-two:8080' },
+        ] },
+      ],
+      usageByProvider,
+    });
+
+    expect(rows[0].stats).toEqual({ success: 8, failure: 1 });
+    expect(rows[1].stats).toEqual({ success: 8, failure: 1 });
+    expect(rows[0].keyCount).toBe(0);
+  });
+
+  it('does not invent usage for keyless providers if no empty-key record is supplied', () => {
+    const rows = buildProviderRows({
+      ...emptyInput,
+      openai: [{ name: 'keyless', baseUrl: 'https://keyless.example.com/v1', apiKeyEntries: [] }],
+    });
+    expect(rows[0].stats).toEqual({ success: 0, failure: 0 });
+  });
+
   it('keeps row keys unique across kinds with identical configs', () => {
     const config: ProviderKeyConfig = {
       apiKey: 'sk-same',

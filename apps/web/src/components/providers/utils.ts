@@ -133,6 +133,16 @@ const EMPTY_RECENT_USAGE_ENTRY: RecentRequestUsageEntry = {
 const normalizeProviderRecentKey = (value: unknown): string =>
   String(value ?? '').trim().toLowerCase();
 
+// Use only an actual empty-key usage record supplied by the server. The
+// absence of that record is not evidence of zero upstream requests.
+const getOpenAIKeylessUsageEntry = (
+  provider: OpenAIProviderConfig,
+  usageByProvider: ProviderRecentUsageMap
+): RecentRequestUsageEntry =>
+  usageByProvider
+    .get(normalizeProviderRecentKey(provider.name))
+    ?.get(buildRecentRequestCompositeKey(provider.baseUrl, '')) ?? EMPTY_RECENT_USAGE_ENTRY;
+
 export function getProviderRecentUsageEntry(
   usageByProvider: ProviderRecentUsageMap,
   provider: string,
@@ -205,14 +215,15 @@ export function collectOpenAIProviderRecentBuckets(
   provider: OpenAIProviderConfig,
   usageByProvider: ProviderRecentUsageMap
 ): RecentRequestBucket[] {
-  if (!provider.apiKeyEntries?.length) {
-    return [];
+  const entries = provider.apiKeyEntries ?? [];
+  const groups = entries
+    .filter((entry) => entry.apiKey?.trim())
+    .map((entry) =>
+      getProviderRecentBuckets(usageByProvider, provider.name, entry.apiKey, provider.baseUrl)
+    );
+  if (entries.length === 0 || entries.some((entry) => !entry.apiKey?.trim())) {
+    groups.push(getOpenAIKeylessUsageEntry(provider, usageByProvider).recentRequests);
   }
-
-  const groups = provider.apiKeyEntries.map((entry) =>
-    getProviderRecentBuckets(usageByProvider, provider.name, entry.apiKey, provider.baseUrl)
-  );
-
   return mergeRecentRequestBucketGroups(groups);
 }
 
@@ -227,22 +238,28 @@ export function getOpenAIProviderTotalStats(
   provider: OpenAIProviderConfig,
   usageByProvider: ProviderRecentUsageMap
 ): { success: number; failure: number } {
-  return (provider.apiKeyEntries || []).reduce(
-    (total, entry) => {
-      const usageEntry = getProviderRecentUsageEntry(
-        usageByProvider,
-        provider.name,
-        entry.apiKey,
-        provider.baseUrl
-      );
-
-      return {
-        success: total.success + usageEntry.success,
-        failure: total.failure + usageEntry.failed,
-      };
-    },
-    { success: 0, failure: 0 }
-  );
+  const entries = provider.apiKeyEntries ?? [];
+  const hasKeyless = entries.length === 0 || entries.some((entry) => !entry.apiKey?.trim());
+  const keyless = hasKeyless
+    ? getOpenAIKeylessUsageEntry(provider, usageByProvider)
+    : EMPTY_RECENT_USAGE_ENTRY;
+  return entries
+    .filter((entry) => entry.apiKey?.trim())
+    .reduce(
+      (total, entry) => {
+        const usageEntry = getProviderRecentUsageEntry(
+          usageByProvider,
+          provider.name,
+          entry.apiKey,
+          provider.baseUrl
+        );
+        return {
+          success: total.success + usageEntry.success,
+          failure: total.failure + usageEntry.failed,
+        };
+      },
+      { success: keyless.success, failure: keyless.failed }
+    );
 }
 
 export function getOpenAIProviderRecentWindowStats(

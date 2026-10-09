@@ -15,3 +15,14 @@ export const hasOpenAIKeyEntryConfiguration = (entry: {
       (entry.weight !== undefined && String(entry.weight).trim() !== '') ||
       Object.entries(entry.headers ?? {}).some(([key, value]) => key.trim() && value.trim())
   );
+
+// Only configured entries are independently testable. A single blank row
+// represents the anonymous upstream if there are no configured entries.
+export const getOpenAITestableKeyIndexes = (
+  entries: Array<Parameters<typeof hasOpenAIKeyEntryConfiguration>[0]>
+): number[] => {
+  const configured = entries.flatMap((entry, index) =>
+    hasOpenAIKeyEntryConfiguration(entry) ? [index] : []
+  );
+  return configured.length ? configured : entries.length ? [0] : [];
+};
