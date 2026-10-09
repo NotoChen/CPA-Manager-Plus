@@ -23,6 +23,7 @@ import {
 import { buildHeaderObject, headersToEntries, normalizeHeaderEntries } from '@/utils/headers';
 import { normalizeAuthIndex } from '@/utils/authIndex';
 import {
+  getOpenAIModelDiscoveryEntry,
   getOpenAITestableKeyIndexes,
   hasOpenAIKeyEntryConfiguration,
 } from '@/utils/openAIKeyEntries';
@@ -339,7 +340,7 @@ export function OpenAIEditDrawer({
     setModelDiscoveryError('');
     const headerObject = buildHeaderObject(form.headers);
     try {
-      const firstKey = form.apiKeyEntries.find(hasOpenAIKeyEntryConfiguration);
+      const firstKey = getOpenAIModelDiscoveryEntry(form.apiKeyEntries);
       const keyAuthIndex = normalizeAuthIndex(firstKey?.authIndex) ?? undefined;
       const list = await modelsApi.fetchModelsViaApiCall(
         form.baseUrl.trim(),

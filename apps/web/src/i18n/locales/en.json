@@ -1385,7 +1385,7 @@
     "health_check_configured_credential": "Credential configured",
     "health_check_key_index": "Key #{{index}}",
     "health_check_no_credential": "No credential configured",
-    "health_check_no_key_entries": "No API key required",
+    "health_check_no_key_entries": "No API key configured",
     "health_check_error_missing_credential": "Missing API key or auth-index",
     "health_check_error_empty_models": "No models returned",
     "health_check_error_vertex_standard_models": "The standard model list address did not respond{{reason}}",

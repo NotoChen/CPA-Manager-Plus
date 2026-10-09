@@ -1383,7 +1383,7 @@
     "health_check_configured_credential": "已設定憑據",
     "health_check_key_index": "Key #{{index}}",
     "health_check_no_credential": "未設定憑據",
-    "health_check_no_key_entries": "不需要 API 金鑰",
+    "health_check_no_key_entries": "未設定 API 金鑰",
     "health_check_error_missing_credential": "缺少 API 金鑰或 auth-index",
     "health_check_error_empty_models": "未返回模型列表",
     "health_check_error_vertex_standard_models": "未發現可用的標準模型發現介面{{reason}}",

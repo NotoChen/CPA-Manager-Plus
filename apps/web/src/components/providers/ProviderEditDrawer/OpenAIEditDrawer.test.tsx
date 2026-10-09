@@ -220,13 +220,17 @@ describe('OpenAIEditDrawer model discovery', () => {
     act(() => renderer!.unmount());
   });
 
-  it('uses the proxy from the first valid credential when an earlier row is empty', async () => {
+  it('prefers a real API key for model discovery over an earlier keyless proxy entry', async () => {
     mocks.getOpenAIProviders.mockResolvedValueOnce([
       {
         name: 'openai-example',
         baseUrl: 'https://api.example.com/v1',
         apiKeyEntries: [
-          { apiKey: '' },
+          {
+            apiKey: '',
+            authIndex: 'auth-keyless',
+            proxyUrl: 'socks5://keyless-proxy.example:1080',
+          },
           {
             apiKey: 'second-key',
             authIndex: 'auth-second',

@@ -61,6 +61,11 @@ describe('providersApi auth-index preservation', () => {
         baseUrl: 'https://another.example/v1',
         apiKeyEntries: [{ apiKey: '', proxyUrl: 'http://proxy.example:8080' }],
       },
+      {
+        name: 'header-only-placeholder',
+        baseUrl: 'https://headers.example/v1',
+        apiKeyEntries: [{ apiKey: '', headers: { 'X-Unsupported-Per-Key': 'value' } }],
+      },
     ]);
 
     expect(mocks.put).toHaveBeenCalledWith('/openai-compatibility', [
@@ -79,17 +84,29 @@ describe('providersApi auth-index preservation', () => {
         'base-url': 'https://another.example/v1',
         'api-key-entries': [{ 'proxy-url': 'http://proxy.example:8080' }],
       },
+      {
+        name: 'header-only-placeholder',
+        'base-url': 'https://headers.example/v1',
+        'api-key-entries': [],
+      },
     ]);
   });
 
   it('reads CPA keyless providers back with an empty credential list', async () => {
     mocks.get.mockResolvedValueOnce({
-      'openai-compatibility': [{
-        name: 'local-anonymous',
-        'base-url': 'http://localhost:11434/v1',
-        'api-key-entries': [],
-        'auth-index': 'cpa-assigned-index',
-      }],
+      'openai-compatibility': [
+        {
+          name: 'local-anonymous',
+          'base-url': 'http://localhost:11434/v1',
+          'api-key-entries': [],
+          'auth-index': 'cpa-assigned-index',
+        },
+        {
+          name: 'header-only-placeholder',
+          'base-url': 'https://headers.example/v1',
+          'api-key-entries': [{ headers: { 'X-Unsupported-Per-Key': 'value' } }],
+        },
+      ],
     });
 
     await expect(providersApi.getOpenAIProviders()).resolves.toEqual([
@@ -98,6 +115,11 @@ describe('providersApi auth-index preservation', () => {
         baseUrl: 'http://localhost:11434/v1',
         apiKeyEntries: [],
         authIndex: 'cpa-assigned-index',
+      }),
+      expect.objectContaining({
+        name: 'header-only-placeholder',
+        baseUrl: 'https://headers.example/v1',
+        apiKeyEntries: [],
       }),
     ]);
   });

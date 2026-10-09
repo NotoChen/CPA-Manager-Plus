@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getOpenAITestableKeyIndexes, hasOpenAIKeyEntryConfiguration } from './openAIKeyEntries';
+import {
+  getOpenAIModelDiscoveryEntry,
+  getOpenAITestableKeyIndexes,
+  hasOpenAIKeyEntryConfiguration,
+} from './openAIKeyEntries';
 
 describe('OpenAI-compatible keyless editor rows', () => {
   it('recognizes only a completely empty placeholder as unconfigured', () => {
@@ -7,7 +11,17 @@ describe('OpenAI-compatible keyless editor rows', () => {
     expect(hasOpenAIKeyEntryConfiguration({ apiKey: '', authIndex: 'cpa-index' })).toBe(true);
     expect(hasOpenAIKeyEntryConfiguration({ apiKey: '', proxyUrl: 'http://proxy:8080' })).toBe(true);
     expect(hasOpenAIKeyEntryConfiguration({ apiKey: '', weight: 0 })).toBe(true);
-    expect(hasOpenAIKeyEntryConfiguration({ apiKey: '', headers: { 'X-Test': 'value' } })).toBe(true);
+    expect(hasOpenAIKeyEntryConfiguration({ apiKey: '', headers: { 'X-Test': 'value' } })).toBe(false);
+  });
+
+  it('prefers a real API key over an earlier configured keyless entry for model discovery', () => {
+    const entries = [
+      { apiKey: '', authIndex: 'keyless-index', proxyUrl: 'socks5://keyless:1080' },
+      { apiKey: 'real-key', authIndex: 'keyed-index', proxyUrl: 'socks5://keyed:1080' },
+    ];
+    expect(getOpenAIModelDiscoveryEntry(entries)).toBe(entries[1]);
+    expect(getOpenAIModelDiscoveryEntry([{ apiKey: '', proxyUrl: 'socks5://keyless:1080' }]))
+      .toEqual({ apiKey: '', proxyUrl: 'socks5://keyless:1080' });
   });
 
   it('tests exactly one anonymous request when every editor row is blank', () => {
