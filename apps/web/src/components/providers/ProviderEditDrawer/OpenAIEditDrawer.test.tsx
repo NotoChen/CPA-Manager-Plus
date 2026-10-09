@@ -195,6 +195,56 @@ describe('OpenAIEditDrawer model discovery', () => {
     act(() => renderer!.unmount());
   });
 
+  it('drops a stale auth-index when a keyless entry is changed to a real API key', async () => {
+    mocks.getOpenAIProviders.mockResolvedValueOnce([{
+      name: 'keyless-to-keyed',
+      baseUrl: 'https://model.example/v1',
+      apiKeyEntries: [{
+        apiKey: '',
+        authIndex: 'old-keyless-index',
+        proxyUrl: 'socks5://proxy.example:1080',
+      }],
+      models: [{ name: 'local-model' }],
+    }]);
+
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <OpenAIEditDrawer open editIndex={0} disabled={false} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+    });
+
+    const keyInput = renderer!.root.findAllByType('input').find(
+      (input) => input.props.placeholder === i18n.t('ai_providers.openai_key_placeholder')
+    );
+    expect(keyInput).toBeDefined();
+    act(() => {
+      keyInput!.props.onChange({ target: { value: 'new-real-key' } });
+    });
+
+    const keyLabel = i18n.t('ai_providers.openai_test_single_action');
+    const testButton = renderer!.root.findAllByType('button').find((button) =>
+      button.findAllByType('span').some((span) => span.children.join('') === keyLabel)
+    );
+    await act(async () => {
+      await testButton?.props.onClick();
+    });
+
+    expect(mocks.apiCallRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        authIndex: undefined,
+        proxyUrl: 'socks5://proxy.example:1080',
+        header: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer new-real-key',
+        },
+      }),
+      expect.anything()
+    );
+
+    act(() => renderer!.unmount());
+  });
+
   it('disables testing an empty placeholder when another key is configured', async () => {
     mocks.getOpenAIProviders.mockResolvedValueOnce([{
       name: 'mixed',

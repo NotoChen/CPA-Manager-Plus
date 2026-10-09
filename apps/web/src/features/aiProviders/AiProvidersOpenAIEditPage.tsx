@@ -16,7 +16,11 @@ import { useEdgeSwipeBack } from '@/hooks/useEdgeSwipeBack';
 import { useNotificationStore } from '@/stores';
 import { apiCallApi, getApiCallErrorDetails } from '@/services/api';
 import { normalizeAuthIndex } from '@/utils/authIndex';
-import { getOpenAIKeyCount, getOpenAITestableKeyIndexes } from '@/utils/openAIKeyEntries';
+import {
+  getOpenAIKeyCount,
+  getOpenAITestableKeyIndexes,
+  updateOpenAIApiKey,
+} from '@/utils/openAIKeyEntries';
 import { buildHeaderObject, hasHeader } from '@/utils/headers';
 import { buildApiKeyEntry, buildOpenAIChatCompletionsEndpoint } from '@/components/providers/utils';
 import {
@@ -338,7 +342,13 @@ export function AiProvidersOpenAIEditPage() {
     const list = entries.length ? entries : [buildApiKeyEntry()];
 
     const updateEntry = (idx: number, field: keyof OpenAIFormApiKeyEntry, value: string) => {
-      const next = list.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry));
+      const next = list.map((entry, i) =>
+        i === idx
+          ? field === 'apiKey'
+            ? updateOpenAIApiKey(entry, value)
+            : { ...entry, [field]: value }
+          : entry
+      );
       setForm((prev) => ({ ...prev, apiKeyEntries: next }));
       setDraftKeyTestStatus(idx, { status: 'idle', message: '' });
       setTestStatus('idle');

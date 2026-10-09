@@ -234,6 +234,10 @@ describe('provider health check model', () => {
       usageByProvider: emptyUsageByProvider,
     });
     const [item] = buildProviderHealthCheckItems(rows);
+    expect(item).toMatchObject({
+      targetLabelKey: 'ai_providers.health_check_keyless_index',
+      targetLabelValues: { index: 1 },
+    });
     await expect(runProviderHealthCheckItem(rows, item)).resolves.toMatchObject({
       status: 'success',
       modelCount: 1,

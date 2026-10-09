@@ -249,6 +249,7 @@ const buildOpenAIProviderItems = (
 
   return entries.map((entry, keyIndex) => {
     const credentialDetail = getCredentialDetailLabel(entry.apiKey, entry.authIndex);
+    const hasApiKey = Boolean(entry.apiKey?.trim());
     return {
       id: `${row.key}:key:${keyIndex}`,
       providerKey: row.key,
@@ -256,8 +257,10 @@ const buildOpenAIProviderItems = (
       providerIndex: row.originalIndex,
       providerLabel: providerDisplay.providerLabel,
       providerSubtitle: providerDisplay.providerSubtitle,
-      targetLabel: `Key #${keyIndex + 1}`,
-      targetLabelKey: 'ai_providers.health_check_key_index',
+      targetLabel: hasApiKey ? `Key #${keyIndex + 1}` : `Keyless #${keyIndex + 1}`,
+      targetLabelKey: hasApiKey
+        ? 'ai_providers.health_check_key_index'
+        : 'ai_providers.health_check_keyless_index',
       targetLabelValues: { index: keyIndex + 1 },
       detailLabel: credentialDetail.detailLabel,
       detailLabelKey: credentialDetail.detailLabelKey,

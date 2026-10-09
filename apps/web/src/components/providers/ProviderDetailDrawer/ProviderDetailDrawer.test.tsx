@@ -95,6 +95,17 @@ describe('ProviderDetailDrawer', () => {
     expect(text.match(/\(default\)/g)).toHaveLength(1);
   });
 
+  it('shows an explicit zero-key section for a provider with no API key entries', () => {
+    const row = buildOpenAIRow({
+      name: 'Anonymous OpenAI',
+      baseUrl: 'https://anonymous.example/v1',
+      apiKeyEntries: [],
+    });
+    const text = renderDetailText(row);
+    expect(text).toContain('ai_providers.openai_keys_count: 0');
+    expect(text).toContain('ai_providers.health_check_no_key_entries');
+  });
+
   it('shows keyless statistics as unavailable and mixed statistics as partial', () => {
     const keylessRow = buildOpenAIRow({
       name: 'Keyless OpenAI',

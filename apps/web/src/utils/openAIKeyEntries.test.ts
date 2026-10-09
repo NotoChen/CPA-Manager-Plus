@@ -5,6 +5,7 @@ import {
   getOpenAITestableKeyIndexes,
   getOpenAIUsageStatsCoverage,
   hasOpenAIKeyEntryConfiguration,
+  updateOpenAIApiKey,
 } from './openAIKeyEntries';
 
 describe('OpenAI-compatible keyless editor rows', () => {
@@ -24,6 +25,21 @@ describe('OpenAI-compatible keyless editor rows', () => {
     expect(getOpenAIModelDiscoveryEntry(entries)).toBe(entries[1]);
     expect(getOpenAIModelDiscoveryEntry([{ apiKey: '', proxyUrl: 'socks5://keyless:1080' }]))
       .toEqual({ apiKey: '', proxyUrl: 'socks5://keyless:1080' });
+  });
+
+  it('invalidates a server auth-index whenever the user edits an API key', () => {
+    expect(
+      updateOpenAIApiKey(
+        { apiKey: '', authIndex: 'old-keyless-index', proxyUrl: 'socks5://proxy:1080' },
+        'new-key'
+      )
+    ).toEqual({
+      apiKey: 'new-key',
+      authIndex: '',
+      proxyUrl: 'socks5://proxy:1080',
+    });
+    expect(updateOpenAIApiKey({ apiKey: 'old-key', authIndex: 'old-key-index' }, 'new-key'))
+      .toEqual({ apiKey: 'new-key', authIndex: '' });
   });
 
   it('counts only real API keys and reports keyless accounting coverage explicitly', () => {

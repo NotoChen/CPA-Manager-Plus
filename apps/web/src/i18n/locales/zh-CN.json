@@ -1382,6 +1382,7 @@
     "health_check_auth_index_label": "auth-index: {{index}}",
     "health_check_configured_credential": "已配置凭据",
     "health_check_key_index": "Key #{{index}}",
+    "health_check_keyless_index": "无密钥配置 #{{index}}",
     "health_check_no_credential": "未配置凭据",
     "health_check_no_key_entries": "未配置 API 密钥",
     "usage_stats_unavailable": "统计不可用",

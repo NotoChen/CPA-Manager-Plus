@@ -176,15 +176,17 @@ export function ProviderDetailDrawer({
     if (!row || row.kind !== 'openai') return null;
     const provider = row.raw;
     const entries = provider.apiKeyEntries ?? [];
-    if (!entries.length) return null;
 
     return (
       <section className={styles.section}>
         <h4 className={styles.sectionTitle}>
           {t('ai_providers.openai_keys_count')}: {getOpenAIKeyCount(entries)}
         </h4>
-        <div className={styles.keyEntryList}>
-          {entries.map((entry, entryIndex) => {
+        {entries.length === 0 ? (
+          <span>{t('ai_providers.health_check_no_key_entries')}</span>
+        ) : (
+          <div className={styles.keyEntryList}>
+            {entries.map((entry, entryIndex) => {
             const entryStats = getProviderTotalStats(
               usageByProvider,
               provider.name,
@@ -219,8 +221,9 @@ export function ProviderDetailDrawer({
                 </span>
               </div>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </section>
     );
   };

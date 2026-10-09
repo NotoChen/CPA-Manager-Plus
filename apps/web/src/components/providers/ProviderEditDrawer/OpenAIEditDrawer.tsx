@@ -25,6 +25,7 @@ import { normalizeAuthIndex } from '@/utils/authIndex';
 import {
   getOpenAIKeyCount,
   getOpenAIModelDiscoveryEntry,
+  updateOpenAIApiKey,
   getOpenAITestableKeyIndexes,
   hasOpenAIKeyEntryConfiguration,
 } from '@/utils/openAIKeyEntries';
@@ -736,7 +737,13 @@ export function OpenAIEditDrawer({
   const renderKeyEntries = () => {
     const list = form.apiKeyEntries.length ? form.apiKeyEntries : [buildApiKeyEntry()];
     const updateEntry = (idx: number, field: keyof OpenAIFormApiKeyEntry, value: string) => {
-      const next = list.map((entry, i) => (i === idx ? { ...entry, [field]: value } : entry));
+      const next = list.map((entry, i) =>
+        i === idx
+          ? field === 'apiKey'
+            ? updateOpenAIApiKey(entry, value)
+            : { ...entry, [field]: value }
+          : entry
+      );
       setForm((prev) => ({ ...prev, apiKeyEntries: next }));
       setKeyTestStatuses((prev) => {
         const nextStatuses = [...prev];

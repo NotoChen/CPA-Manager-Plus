@@ -23,6 +23,17 @@ export const getOpenAIModelDiscoveryEntry = <T extends OpenAIKeyEntryLike>(
   entries.find((entry) => entry.apiKey?.trim()) ??
   entries.find((entry) => hasOpenAIKeyEntryConfiguration(entry));
 
+export const updateOpenAIApiKey = <T extends OpenAIKeyEntryLike>(
+  entry: T,
+  apiKey: string
+): T => ({
+  ...entry,
+  apiKey,
+  // auth-index identifies the server-side credential generated from the old key.
+  // Any user edit to the key invalidates that identity until CPA returns a fresh one.
+  authIndex: '',
+});
+
 export const getOpenAIKeyCount = (entries: OpenAIKeyEntryLike[]): number =>
   entries.filter((entry) => entry.apiKey?.trim()).length;
 

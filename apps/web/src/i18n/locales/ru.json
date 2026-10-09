@@ -1388,6 +1388,7 @@
     "health_check_auth_index_label": "Индекс входа: {{index}}",
     "health_check_configured_credential": "Учётные данные настроены",
     "health_check_key_index": "Ключ #{{index}}",
+    "health_check_keyless_index": "Без ключа #{{index}}",
     "health_check_no_credential": "Учётные данные не настроены",
     "health_check_no_key_entries": "API-ключ не настроен",
     "usage_stats_unavailable": "Статистика недоступна",

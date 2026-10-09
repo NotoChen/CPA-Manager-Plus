@@ -1384,6 +1384,7 @@
     "health_check_auth_index_label": "auth-index: {{index}}",
     "health_check_configured_credential": "Credential configured",
     "health_check_key_index": "Key #{{index}}",
+    "health_check_keyless_index": "Keyless #{{index}}",
     "health_check_no_credential": "No credential configured",
     "health_check_no_key_entries": "No API key configured",
     "usage_stats_unavailable": "Statistics unavailable",
