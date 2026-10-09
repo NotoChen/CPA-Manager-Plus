@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpenAIFormState } from '@/components/providers/types';
 
 const mocks = vi.hoisted(() => ({
@@ -203,14 +203,22 @@ const editKeyAndRerender = (
 
 describe('AiProvidersOpenAIEditPage keyless connectivity', () => {
   beforeEach(() => {
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
     vi.clearAllMocks();
     mocks.apiCallRequest.mockResolvedValue({ statusCode: 200, body: '{}' });
     mocks.context = buildContext([{ apiKey: '' }]);
     mocks.setForm.mockImplementation((action) => {
-      const context = mocks.context as unknown as EditorContext;
+      const context = mocks.context as EditorContext;
       context.form =
         typeof action === 'function' ? action(context.form) : action;
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('tests a pure keyless provider without Authorization or auth-index', async () => {

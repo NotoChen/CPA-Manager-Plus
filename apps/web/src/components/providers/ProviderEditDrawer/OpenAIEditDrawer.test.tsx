@@ -247,9 +247,8 @@ describe('OpenAIEditDrawer model discovery', () => {
 
   it('does not stay dirty when the API key is changed and restored after auth-index invalidation', async () => {
     const onClose = vi.fn();
-    const originalConfirm = window.confirm;
     const confirmMock = vi.fn(() => true);
-    window.confirm = confirmMock;
+    vi.stubGlobal('window', { confirm: confirmMock });
     mocks.getOpenAIProviders.mockResolvedValueOnce([{
       name: 'restore-key',
       baseUrl: 'https://model.example/v1',
@@ -291,7 +290,7 @@ describe('OpenAIEditDrawer model discovery', () => {
       expect(onClose).toHaveBeenCalledTimes(1);
       act(() => renderer!.unmount());
     } finally {
-      window.confirm = originalConfirm;
+      vi.unstubAllGlobals();
     }
   });
 
