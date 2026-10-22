@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - .github/workflows/sync-and-publish-image.yml
+      - .github/scripts/ensure-personal-compatibility.mjs
+      - .github/tests/cpamp-personal-compatibility.test.ts
   schedule:
     - cron: '29 */12 * * *'
   workflow_dispatch:
@@ -80,6 +82,7 @@ jobs:
             auto_resolve_paths=(
               apps/web/src/components/providers/ProviderTable/rowData.ts
               apps/web/src/features/monitoring/model/eventRows.ts
+              apps/web/src/features/monitoring/model/eventRows.test.ts
               apps/web/src/features/monitoring/model/sourceDisplay.ts
               apps/web/src/utils/sourceResolver.ts
               apps/web/src/utils/usage.ts
@@ -125,6 +128,19 @@ jobs:
               } | tee "${failure_report}" >&2
               exit 1
             fi
+
+            # Keep fork contracts outside upstream-owned tests so upstream test
+            # changes can merge without dropping coverage of personal behavior.
+            compatibility_tool="${RUNNER_TEMP}/ensure-personal-compatibility.mjs"
+            compatibility_test="${RUNNER_TEMP}/cpamp-personal-compatibility.test.ts"
+            git show "${GITHUB_SHA}:.github/scripts/ensure-personal-compatibility.mjs" > "${compatibility_tool}"
+            git show "${GITHUB_SHA}:.github/tests/cpamp-personal-compatibility.test.ts" > "${compatibility_test}"
+            node "${compatibility_tool}" "${compatibility_test}"
+            git add -- \
+              apps/web/src/components/providers/ProviderTable/rowData.ts \
+              apps/web/src/utils/sourceResolver.ts \
+              apps/web/src/features/monitoring/model/sourceDisplay.ts \
+              apps/web/src/features/monitoring/model/personalCompatibility.test.ts
 
             if [ "${#auto_resolved[@]}" -gt 0 ]; then
               printf 'Accepted official versions of test-covered paths:\n%s\n' \
@@ -187,7 +203,8 @@ jobs:
             src/components/providers/ProviderDetailDrawer/ProviderDetailDrawer.test.tsx \
             src/utils/sourceResolver.test.ts \
             src/features/monitoring/model/eventRows.test.ts \
-            src/features/monitoring/model/sourceDisplay.test.ts
+            src/features/monitoring/model/sourceDisplay.test.ts \
+            src/features/monitoring/model/personalCompatibility.test.ts
 
       - name: Type-check CPAMP
         id: type_check
