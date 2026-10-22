@@ -7,7 +7,7 @@ on:
     paths:
       - .github/workflows/sync-and-publish-image.yml
   schedule:
-    - cron: '29 * * * *'
+    - cron: '29 */12 * * *'
   workflow_dispatch:
 
 permissions:
