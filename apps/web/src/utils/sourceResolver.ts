@@ -22,27 +22,21 @@ type SourceInfoEntry = Required<Pick<SourceInfo, 'displayName' | 'type' | 'ident
 export interface SourceInfoMap {
   byAuthIndex: Map<string, SourceInfoEntry | null>;
   bySource: Map<string, SourceInfoEntry | null>;
-  byProviderSource?: Map<string, SourceInfoEntry | null>;
+  bySourceAndProvider?: Map<string, SourceInfoEntry | null>;
   byIdentityKey: Map<string, SourceInfoEntry>;
 }
 
 const buildProviderIdentityKey = (type: string, index: number | string) => `${type}:${index}`;
-
 const normalizeProviderType = (value: unknown) => {
-  const normalized = String(value ?? '')
-    .trim()
-    .toLowerCase()
-    .replace(/_/g, '-');
+  const normalized = String(value ?? '').trim().toLowerCase().replace(/_/g, '-');
   if (normalized === 'openai-compatibility') return 'openai';
   if (normalized === 'x-ai' || normalized === 'grok') return 'xai';
   if (normalized === 'gemini-cli') return 'gemini';
   return normalized;
 };
 
-const buildProviderSourceKey = (provider: unknown, source: string) => {
-  const providerType = normalizeProviderType(provider);
-  return providerType && source ? `${providerType}\u0000${source}` : '';
-};
+const buildProviderSourceKey = (provider: string, source: string) =>
+  JSON.stringify([normalizeProviderType(provider), source]);
 
 const hasDisableAllModelsRule = (models?: string[]) =>
   Array.isArray(models) && models.some((model) => String(model ?? '').trim() === '*');
@@ -105,12 +99,7 @@ const extractHost = (baseUrl: string | undefined) => {
 };
 
 const buildProviderDisplayNames = (
-  items: Array<{
-    prefix?: string;
-    name?: string;
-    baseUrl?: string;
-    displayName?: string;
-  }>,
+  items: Array<{ prefix?: string; name?: string; baseUrl?: string; displayName?: string }>,
   fallbackLabel: string
 ) => {
   const hostCounts = new Map<string, number>();
@@ -182,7 +171,7 @@ const buildOpenAIKeyDisplayNameMap = (providers: OpenAIProviderConfig[]) => {
 export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
   const byAuthIndex = new Map<string, SourceInfoEntry | null>();
   const bySource = new Map<string, SourceInfoEntry | null>();
-  const byProviderSource = new Map<string, SourceInfoEntry | null>();
+  const bySourceAndProvider = new Map<string, SourceInfoEntry | null>();
   const byIdentityKey = new Map<string, SourceInfoEntry>();
 
   const registerProvider = (
@@ -196,7 +185,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
 
     Array.from(candidates).forEach((candidate) => {
       registerIdentity(bySource, candidate, entry);
-      registerIdentity(byProviderSource, buildProviderSourceKey(entry.type, candidate), entry);
+      registerIdentity(bySourceAndProvider, buildProviderSourceKey(entry.type, candidate), entry);
     });
   };
 
@@ -277,7 +266,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
     });
   });
 
-  [byAuthIndex, bySource, byProviderSource].forEach((map) => {
+  [byAuthIndex, bySource, bySourceAndProvider].forEach((map) => {
     map.forEach((entry) => {
       if (entry) {
         byIdentityKey.set(entry.identityKey, entry);
@@ -285,7 +274,7 @@ export function buildSourceInfoMap(input: SourceInfoMapInput): SourceInfoMap {
     });
   });
 
-  return { byAuthIndex, bySource, byProviderSource, byIdentityKey };
+  return { byAuthIndex, bySource, bySourceAndProvider, byIdentityKey };
 }
 
 export const buildSourceProviderStateMap = (sourceInfoMap: SourceInfoMap) => {
@@ -303,7 +292,7 @@ export function resolveSourceDisplay(
   authIndex: unknown,
   sourceInfoMap: SourceInfoMap,
   authFileMap: Map<string, CredentialInfo>,
-  provider?: unknown
+  providerRaw: unknown = ''
 ): SourceInfo {
   const source = normalizeUsageSourceId(sourceRaw);
   const authIndexKey = normalizeAuthIndex(authIndex);
@@ -323,12 +312,20 @@ export function resolveSourceDisplay(
   }
 
   const matchedBySource = source ? sourceInfoMap.bySource.get(source) : null;
-  if (matchedBySource) return matchedBySource;
+  const sharedAcrossProviders =
+    matchedBySource?.identityKey.startsWith('shared:') && !matchedBySource.type;
+  if (matchedBySource && !sharedAcrossProviders) return matchedBySource;
 
-  const matchedByProviderSource = source
-    ? sourceInfoMap.byProviderSource?.get(buildProviderSourceKey(provider, source))
-    : null;
-  if (matchedByProviderSource) return matchedByProviderSource;
+  // A source shared across providers may have one display name but distinct
+  // provider identities. Keep same-provider ambiguity unchanged.
+  if (source && (matchedBySource === null || sharedAcrossProviders)) {
+    const provider = normalizeProviderType(providerRaw);
+    const matchedByProvider = provider
+      ? sourceInfoMap.bySourceAndProvider?.get(buildProviderSourceKey(provider, source))
+      : null;
+    if (matchedByProvider) return matchedByProvider;
+  }
+  if (matchedBySource) return matchedBySource;
 
   if (source) {
     return {
@@ -358,10 +355,7 @@ export function resolveSourceIdentityKey(
   authIndex: unknown,
   sourceInfoMap: SourceInfoMap,
   authFileMap: Map<string, CredentialInfo>,
-  provider?: unknown
+  providerRaw: unknown = ''
 ): string {
-  return (
-    resolveSourceDisplay(sourceRaw, authIndex, sourceInfoMap, authFileMap, provider).identityKey ||
-    ''
-  );
+  return resolveSourceDisplay(sourceRaw, authIndex, sourceInfoMap, authFileMap, providerRaw).identityKey || '';
 }
